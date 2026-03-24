@@ -17,12 +17,11 @@ build/
 .vercel/
 *.local
 
-# Environment secrets — NEVER commit these
+# Environment secrets — NEVER commit real secrets
 .env
 .env.local
 .env.*.local
-.env.production
-.env.development
+# .env.production is intentionally committed — only contains public anon key
 
 # Vite / TS caches
 *.tsbuildinfo

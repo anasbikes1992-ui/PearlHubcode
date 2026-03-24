@@ -1,7 +1,7 @@
 # Environment variables — NEVER commit real secrets
 .env
 .env.local
-.env.production
+# .env.production intentionally committed â€" contains only public Supabase anon key
 .env.*.local
 
 # Logs

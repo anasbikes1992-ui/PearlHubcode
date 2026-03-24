@@ -3,6 +3,16 @@
   "outputDirectory": "web/dist",
   "installCommand": "echo skip-root-install",
   "framework": null,
+  "env": {
+    "VITE_SUPABASE_URL": "https://pxuydclxnnfgzpzccfoa.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_XJZSHY9N6n1JVg9JvRd31Q_cJ5kjqBk"
+  },
+  "build": {
+    "env": {
+      "VITE_SUPABASE_URL": "https://pxuydclxnnfgzpzccfoa.supabase.co",
+      "VITE_SUPABASE_ANON_KEY": "sb_publishable_XJZSHY9N6n1JVg9JvRd31Q_cJ5kjqBk"
+    }
+  },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
