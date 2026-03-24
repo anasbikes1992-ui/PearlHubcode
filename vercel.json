@@ -1,8 +1,8 @@
 {
-  "buildCommand": "npm --prefix web ci && npm --prefix web run build",
+  "buildCommand": "cd web && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "web/dist",
-  "installCommand": "npm --prefix web ci",
-  "framework": "vite",
+  "installCommand": "echo skip-root-install",
+  "framework": null,
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
