@@ -1,0 +1,58 @@
+name: pearlhub_customer
+description: PearlHub Customer App — Sri Lanka's premier marketplace
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  supabase_flutter: ^2.5.0
+
+  # Shared package
+  pearlhub_shared:
+    path: ../shared
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # State
+  flutter_riverpod: ^2.5.1
+
+  # Maps
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # Payments
+  webview_flutter: ^4.7.0
+
+  # Media
+  image_picker: ^1.0.7
+  cached_network_image: ^3.3.1
+  smooth_page_indicator: ^1.1.0
+
+  # Push notifications
+  firebase_core: ^3.1.0
+  firebase_messaging: ^15.0.2
+
+  # QR
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.0
+
+  # UI utilities
+  intl: ^0.19.0
+  url_launcher: ^6.2.5
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.1.0
+  shimmer: ^3.0.0
+  fl_chart: ^0.67.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/
+    - assets/icons/

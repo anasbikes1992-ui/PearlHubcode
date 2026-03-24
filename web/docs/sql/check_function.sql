@@ -1,0 +1,1 @@
+SELECT routine_name FROM information_schema.routines WHERE routine_name = 'search_all_listings' AND routine_schema = 'public';

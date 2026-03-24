@@ -1,0 +1,1 @@
+SELECT column_name FROM information_schema.columns WHERE table_name = 'vehicles_listings' AND table_schema = 'public' ORDER BY ordinal_position;

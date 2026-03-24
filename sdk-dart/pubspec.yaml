@@ -1,0 +1,15 @@
+name: pearlhub_sdk
+description: PearlHub Pro Dart SDK — multi-vertical travel & lifestyle platform for Sri Lanka.
+version: 1.0.0
+homepage: https://github.com/pearlhub/pearlhub-sdk-dart
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  supabase_flutter: ^2.5.0
+  http: ^1.2.0
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0

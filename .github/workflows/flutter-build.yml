@@ -1,0 +1,61 @@
+name: Flutter — Build APKs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+
+jobs:
+  build:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [customer, provider, admin]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Resolve shared package
+        working-directory: flutter/pearlhub_shared
+        run: flutter pub get
+
+      - name: Resolve app dependencies
+        working-directory: flutter/${{ matrix.app }}
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: flutter/${{ matrix.app }}
+        run: flutter analyze --fatal-infos
+
+      - name: Run tests
+        working-directory: flutter/${{ matrix.app }}
+        run: flutter test --coverage
+
+      - name: Build APK (release)
+        working-directory: flutter/${{ matrix.app }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=$SUPABASE_URL \
+            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-apk
+          path: flutter/${{ matrix.app }}/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14

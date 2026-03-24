@@ -1,0 +1,83 @@
+# ──────────────────────────────────────────────
+# Node / Web
+# ──────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.output/
+.vercel/
+*.local
+
+# Environment secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Vite / TS caches
+*.tsbuildinfo
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# ──────────────────────────────────────────────
+# Flutter / Dart
+# ──────────────────────────────────────────────
+flutter/**/build/
+flutter/**/.dart_tool/
+flutter/**/.flutter-plugins
+flutter/**/.flutter-plugins-dependencies
+flutter/**/pubspec.lock
+flutter/**/*.g.dart
+flutter/**/*.freezed.dart
+flutter/**/*.iml
+flutter/**/android/.gradle/
+flutter/**/android/local.properties
+flutter/**/android/captures/
+flutter/**/android/app/debug/
+flutter/**/android/app/profile/
+flutter/**/android/app/release/
+flutter/**/ios/Pods/
+flutter/**/ios/.symlinks/
+flutter/**/ios/Flutter/App.framework/
+flutter/**/ios/Flutter/Flutter.framework/
+flutter/**/ios/Flutter/Generated.xcconfig
+flutter/**/ios/Flutter/flutter_export_environment.sh
+flutter/**/ios/ServiceDefinitions.json
+flutter/**/ios/Runner/GeneratedPluginRegistrant.*
+flutter/**/linux/flutter/generated_plugin_registrant.cc
+flutter/**/linux/flutter/generated_plugin_registrant.h
+flutter/**/linux/flutter/generated_plugins.cmake
+flutter/**/macos/Flutter/GeneratedPluginRegistrant.swift
+flutter/**/windows/flutter/generated_plugin_registrant.cc
+flutter/**/windows/flutter/generated_plugin_registrant.h
+flutter/**/windows/flutter/generated_plugins.cmake
+
+# Dart SDK build
+sdk-dart/.dart_tool/
+sdk-dart/pubspec.lock
+
+# ──────────────────────────────────────────────
+# TypeScript SDK
+# ──────────────────────────────────────────────
+sdk-ts/dist/
+sdk-ts/node_modules/
+
+# ──────────────────────────────────────────────
+# Editors / OS
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+.idea/
+.vscode/settings.json
+.vscode/*.code-workspace
+
+# Supabase local
+supabase/.temp/
