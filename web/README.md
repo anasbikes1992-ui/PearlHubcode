@@ -18,21 +18,23 @@ npm install
 
 ### 2. Configure environment
 
-Copy `.env.example` to `.env` and fill in your credentials:
+Copy `.env.example` to `.env.local` and fill in only browser-safe values:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
 | Variable | Where to find it |
-|---|---|
+| --- | --- |
 | `VITE_SUPABASE_URL` | Supabase dashboard → Project Settings → API |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase dashboard → Project Settings → API (anon key) |
+| `VITE_SUPABASE_ANON_KEY` | Supabase dashboard → Project Settings → API (anon key) |
 | `VITE_SUPABASE_PROJECT_ID` | Supabase dashboard → Project Settings → General |
+
+Server-only secrets such as `SUPABASE_SERVICE_ROLE_KEY`, `PAYHERE_MERCHANT_SECRET`, and `WEBXPAY_SECRET` must stay in Supabase Edge Function secrets or `supabase/.env.local` for local backend work.
 
 **Optional — AI Concierge (local dev only):**
 
-```bash
+```env
 # .env.local  (never commit this)
 VITE_ANTHROPIC_API_KEY=sk-ant-...
 ```
@@ -63,7 +65,7 @@ npm run dev
 ## Security Hardening Applied (Phase 1)
 
 | Issue | Fix |
-|---|---|
+| --- | --- |
 | `.env` with live secrets committed | Scrubbed; `.env` now in `.gitignore` |
 | Mock `setTimeout` login | Real Supabase `signInWithPassword` / `signUp` via `AuthContext` |
 | Client-side admin role check | `RequireAuth` verifies real Supabase session; RLS enforces server-side |
@@ -84,14 +86,11 @@ Zustand (UI state only: favorites, toasts, compare)
 
 **Listing pages** (`StaysPage`, `VehiclesPage`, `EventsPage`, `PropertyPage`) now read from Supabase via React Query hooks in `src/hooks/useListings.ts`. The Zustand store is UI-state only.
 
-## Payment Integration (Next Step)
+## Payment Integration
 
-Payment flows create `bookings` rows with `status: 'pending'`. To complete the integration:
+The hardened checkout flow now creates a signed server-side PayHere session through `supabase/functions/create-payhere-session/` and confirms payment through `supabase/functions/payment-webhook/`.
 
-1. **Choose a gateway:** PayHere (LKR) or Stripe (USD/EUR/international)
-2. **Create a Supabase Edge Function** at `supabase/functions/payment-webhook/`
-3. **Verify HMAC signature** from the gateway in the Edge Function
-4. **Update booking status** to `'confirmed'` and create an `earnings` row in the same transaction
+The browser no longer writes `bookings` or `payment_transactions` directly.
 
 ## AI Concierge
 
@@ -104,7 +103,7 @@ The `AIConcierge` component calls the Anthropic API. In production:
 ## Database Migrations
 
 | Migration | Purpose |
-|---|---|
+| --- | --- |
 | `phase_0_security_admin_foundations` | `user_reports`, `request_logs`, `admin_actions`, `bookings`, `earnings` |
 | `create_properties_listings` | Properties table with RLS |
 | `create_social_listings` | Social/community listings |

@@ -8,7 +8,7 @@
  *   This modal initiates the payment flow and handles UI state.
  *   The Edge Function webhook confirms payment and updates booking status.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,7 @@ const GATEWAYS = [
       { id: "card",   icon: <CreditCard size={15} />,  label: "Credit / Debit Card",    sub: "Visa, Mastercard, Amex" },
       { id: "mobile", icon: <Smartphone size={15} />,  label: "Mobile Wallet",           sub: "eZ Cash, Genie, FriMi" },
     ],
+    enabled: true,
     sandbox: true,
     note: "Managed by LankaClear (Pvt) Ltd. Funds settle in LKR within 3 business days.",
   },
@@ -46,6 +47,7 @@ const GATEWAYS = [
       { id: "bank",    icon: <Building2 size={15} />,  label: "Internet Banking",         sub: "BOC, Peoples, NSB, Sampath, HNB" },
       { id: "mobile",  icon: <Smartphone size={15} />, label: "Mobile Banking",           sub: "Bank app transfers" },
     ],
+    enabled: false,
     sandbox: true,
     note: "Official national payment switch of Sri Lanka operated by LankaClear (Pvt) Ltd.",
   },
@@ -61,6 +63,7 @@ const GATEWAYS = [
       { id: "card",    icon: <CreditCard size={15} />, label: "Credit / Debit Card",     sub: "Visa, Mastercard (international)" },
       { id: "mobile",  icon: <Smartphone size={15} />, label: "Mobile Wallet",            sub: "eZ Cash, mCash" },
     ],
+    enabled: false,
     sandbox: true,
     note: "WebXPay by Webxperts (Pvt) Ltd. PCI-DSS Level 1 certified. 3D Secure enabled.",
   },
@@ -82,6 +85,32 @@ interface CheckoutModalProps {
     checkOut?: string;
   };
   onSuccess: (bookingRef: string) => void;
+}
+
+type PaymentSessionResponse = {
+  checkoutUrl: string;
+  bookingId: string;
+  paymentRef: string;
+  gateway: "payhere";
+  payload: Record<string, string>;
+};
+
+function submitGatewayForm(action: string, fields: Record<string, string>) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = action;
+  form.style.display = "none";
+
+  for (const [key, value] of Object.entries(fields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = value;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
 }
 
 // ── Card form (shared across gateways) ─────────────────────
@@ -169,6 +198,7 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
   const [isProcessing, setIsProcessing]       = useState(false);
   const [error, setError]                     = useState("");
   const [bookingRef, setBookingRef]           = useState("");
+  const idempotencyKeyRef                     = useRef(globalThis.crypto?.randomUUID?.() ?? `checkout-${Date.now()}`);
 
   const { user } = useAuth();
   const { showToast } = useStore();
@@ -178,80 +208,41 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
   const handlePayment = async () => {
     if (!agreeTerms) { setError("Please accept the Terms & Conditions to proceed."); return; }
     if (!user)       { setError("You must be signed in to complete a booking."); return; }
+    if (!item.id)    { setError("This listing is missing a secure server-side identifier."); return; }
+    if (!gateway.enabled) {
+      setError(`${gateway.name} is not enabled on the hardened production branch yet. Use PayHere for the live path.`);
+      return;
+    }
     setError("");
     setIsProcessing(true);
     setStep(3);
 
     try {
-      // ── 1. Create pending booking record ───────────────
-      const { data, error: dbError } = await (supabase as any)
-        .from("bookings")
-        .insert({
-          user_id:        user.id,
-          listing_id:     item.id ?? "unknown",
-          listing_type:   item.type,
-          booking_date:   new Date().toISOString().split("T")[0],
-          check_in_date:  item.checkIn  ?? new Date().toISOString().split("T")[0],
-          check_out_date: item.checkOut ?? new Date().toISOString().split("T")[0],
-          total_amount:   item.price,
-          currency:       item.currency,
-          status:         "pending",
-        })
-        .select("id")
-        .single();
-
-      if (dbError) console.error("Booking insert error:", dbError);
-
-      const ref = data?.id
-        ? `PH-${data.id.slice(0, 8).toUpperCase()}`
-        : `PH-${Date.now().toString(36).toUpperCase()}`;
-
-      setBookingRef(ref);
-
-      // ── 2. Log payment attempt ──────────────────────────
-      await (supabase as any).from("wallet_transactions").insert({
-        user_id:     user.id,
-        type:        "fee",
-        amount:      item.price,
-        description: `${gateway.name} payment — ${item.title} (${ref})`,
-        status:      "pending",
-        ref,
+      const { data, error: fnError } = await supabase.functions.invoke<PaymentSessionResponse>("create-payhere-session", {
+        body: {
+          listingId: item.id,
+          title: item.title,
+          amount: item.price,
+          currency: item.currency,
+          type: item.type,
+          checkIn: item.checkIn,
+          checkOut: item.checkOut,
+          idempotencyKey: idempotencyKeyRef.current,
+        },
       });
 
-      // ── 3. Gateway-specific integration point ───────────
-      // Production: call Supabase Edge Function which:
-      //   - For PayHere:  send to https://sandbox.payhere.lk/pay/checkout
-      //   - For LankaPay: call LankaClear LankaQR API
-      //   - For WebXPay:  redirect to WebXPay payment page
-      // The Edge Function webhook updates booking status to 'confirmed'
-      //
-      // switch (selectedGateway) {
-      //   case "payhere":
-      //     const { data: ph } = await supabase.functions.invoke("payhere-checkout", { body: { ref, amount: item.price, ... } });
-      //     window.location.href = ph.redirect_url;
-      //     break;
-      //   case "lankapay":
-      //     const { data: lp } = await supabase.functions.invoke("lankapay-init", { body: { ref, amount: item.price, ... } });
-      //     window.location.href = lp.payment_url;
-      //     break;
-      //   case "webxpay":
-      //     const { data: wx } = await supabase.functions.invoke("webxpay-checkout", { body: { ref, amount: item.price, ... } });
-      //     window.location.href = wx.redirect_url;
-      //     break;
-      // }
-
-      // Simulate gateway round-trip (remove when Edge Functions deployed)
-      await new Promise(r => setTimeout(r, 2200));
-
-      // Update booking to confirmed (Edge Function does this in production)
-      if (data?.id) {
-        await (supabase as any).from("bookings")
-          .update({ status: "confirmed" })
-          .eq("id", data.id);
+      if (fnError) {
+        throw fnError;
       }
 
-      setStep(4);
-      onSuccess(ref);
+      if (!data?.checkoutUrl || !data.payload || !data.paymentRef) {
+        throw new Error("The payment session response was incomplete.");
+      }
+
+      setBookingRef(data.paymentRef);
+      showToast("Redirecting to PayHere for secure payment.", "info");
+      onSuccess(data.paymentRef);
+      submitGatewayForm(data.checkoutUrl, data.payload);
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message ?? "Payment failed. Please try again.";
       setError(msg);
@@ -269,6 +260,7 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
     setAgreeTerms(false);
     setError("");
     setBookingRef("");
+    idempotencyKeyRef.current = globalThis.crypto?.randomUUID?.() ?? `checkout-${Date.now()}`;
     onClose();
   };
 
@@ -371,6 +363,9 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
                             {gw.sandbox && (
                               <span className="text-[8px] font-black text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded">SANDBOX</span>
                             )}
+                            {!gw.enabled && (
+                              <span className="text-[8px] font-black text-mist/50 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">NEXT</span>
+                            )}
                           </div>
                           <p className="text-[10px] text-mist/50 truncate">{gw.tagline}</p>
                         </div>
@@ -408,6 +403,9 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
 
                 {/* Gateway note */}
                 <p className="text-[9px] text-mist/30 mt-4 leading-relaxed">{gateway.note}</p>
+                {!gateway.enabled && (
+                  <p className="text-[10px] text-amber-300 mt-2">This gateway is documented and scaffolded, but only PayHere is wired end-to-end in the hardened branch.</p>
+                )}
 
                 {/* Terms agreement */}
                 <label className="flex items-start gap-3 mt-4 cursor-pointer">
@@ -431,7 +429,7 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
                   <p className="text-[9px] text-mist/30">256-bit SSL · PCI-DSS compliant · 3D Secure enabled</p>
                 </div>
 
-                <button onClick={handlePayment} disabled={!agreeTerms || isProcessing}
+                <button onClick={handlePayment} disabled={!agreeTerms || isProcessing || !gateway.enabled}
                   className="w-full mt-5 bg-primary hover:bg-gold-light text-primary-foreground py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   <Lock size={14} /> Pay {formatPrice(item.price, item.currency)} via {gateway.name}
                 </button>
@@ -449,8 +447,9 @@ export default function CheckoutModal({ isOpen, onClose, item, onSuccess }: Chec
                   <div className="absolute inset-0 w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center text-xl">{gateway.logo}</div>
                 </div>
-                <h2 className="text-xl font-black text-pearl mb-2">Processing via {gateway.name}</h2>
-                <p className="text-mist/50 text-sm">Verifying payment with {gateway.name}. Do not close this window.</p>
+                <h2 className="text-xl font-black text-pearl mb-2">Preparing secure redirect</h2>
+                <p className="text-mist/50 text-sm">Creating a server-signed payment session with {gateway.name}. You will be redirected automatically.</p>
+                {bookingRef && <p className="text-[10px] font-mono text-mist/30 mt-3">{bookingRef}</p>}
               </div>
             )}
 

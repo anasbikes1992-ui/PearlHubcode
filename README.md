@@ -1,54 +1,55 @@
 # PearlHub Pro
 
-Full-stack Sri Lanka travel & lifestyle platform.
+Production-focused monorepo for PearlHub, covering the web app, Flutter apps, SDKs, and Supabase backend.
+
+## Current launch branch
+
+Active hardening work is on `production-hardening`.
+
+## Primary documentation
+
+- [Production hardening and launch guide](docs/PRODUCTION_HARDENING_AND_LAUNCH.md)
+- [Web app guide](web/README.md)
 
 ## Repository structure
 
-```
-.github/workflows/   — CI/CD: web deploy, Flutter APK builds, SDK publish
-web/                 — React 19 + TypeScript + Vite + Supabase web app
-flutter/
-  customer/          — Customer Flutter app (Riverpod + GoRouter)
-  provider/          — Provider Flutter app
-  admin/             — Admin Flutter app
-  pearlhub_shared/   — Shared Dart package (models, services, providers)
-sdk-ts/              — @pearlhub/sdk TypeScript SDK
-sdk-dart/            — pearlhub_sdk Dart SDK
-supabase/            — Shared Supabase config & migrations (symlink/reference)
-docs/                — Architecture notes & SQL scripts
+```text
+.github/workflows/   GitHub Actions for web deploy, Flutter builds, SDK publish
+web/                 React 19 + TypeScript + Vite frontend
+flutter/             Customer, provider, admin, and shared Flutter packages
+sdk-ts/              TypeScript SDK
+sdk-dart/            Dart SDK
+supabase/            Edge Functions, migrations, and project config
+docs/                Launch, security, and architecture documentation
 ```
 
-## Web quick start
+## Quick start
 
 ```bash
+git clone https://github.com/anasbikes1992-ui/PearlHubcode.git
+cd PearlHubcode
+git checkout production-hardening
 cd web
-pnpm install
-cp .env.example .env   # fill in VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
-pnpm dev
+npm install --legacy-peer-deps
+npm run dev
 ```
 
-## Flutter quick start
+## Security note
 
-```bash
-cd flutter/pearlhub_shared && flutter pub get
-cd ../customer && flutter pub get && flutter run
-```
-
-## Deployment
-
-- **Web**: Vercel — triggered automatically on push to `main` via GitHub Actions
-- **Flutter**: APKs built by GitHub Actions on every push/PR to `main`
-- **SDK**: Published to npm on `sdk-ts/v*` tag
+Client-safe variables belong in `web/.env.local`.
+Server secrets belong in Supabase Edge Function secrets or the ignored `supabase/.env.local` file for local development.
 
 ## Required GitHub secrets
 
 | Secret | Used by |
-|--------|---------|
-| `VITE_SUPABASE_URL` | web-deploy workflow |
-| `VITE_SUPABASE_ANON_KEY` | web-deploy workflow |
-| `VERCEL_TOKEN` | web-deploy workflow |
-| `VERCEL_ORG_ID` | web-deploy workflow |
-| `VERCEL_PROJECT_ID` | web-deploy workflow |
-| `SUPABASE_URL` | flutter-build workflow |
-| `SUPABASE_ANON_KEY` | flutter-build workflow |
-| `NPM_TOKEN` | sdk-ts-publish workflow |
+| --- | --- |
+| `VERCEL_TOKEN` | web deploy workflow |
+| `VERCEL_ORG_ID` | web deploy workflow |
+| `VERCEL_PROJECT_ID` | web deploy workflow |
+| `NPM_TOKEN` | sdk ts publish workflow |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Functions deployment |
+| `PAYHERE_MERCHANT_ID` | create-payhere-session, payment-webhook |
+| `PAYHERE_MERCHANT_SECRET` | create-payhere-session, payment-webhook |
+| `WEBXPAY_MERCHANT_ID` | next payment phase |
+| `WEBXPAY_SECRET` | next payment phase |
+
