@@ -13,23 +13,31 @@ export interface MonitoringConfig {
 
 let monitoringInitialized = false;
 
-export function initMonitoring(config: MonitoringConfig) {
+export function initMonitoring(config?: MonitoringConfig) {
   if (monitoringInitialized) return;
 
-  if (config.sentryDsn) {
+  const resolvedConfig: MonitoringConfig = {
+    sentryDsn: config?.sentryDsn ?? import.meta.env.VITE_SENTRY_DSN,
+    posthogKey: config?.posthogKey ?? import.meta.env.VITE_POSTHOG_KEY,
+    posthogHost: config?.posthogHost ?? import.meta.env.VITE_POSTHOG_HOST,
+    environment: config?.environment ?? import.meta.env.MODE ?? 'production',
+    release: config?.release ?? import.meta.env.VITE_APP_RELEASE,
+  };
+
+  if (resolvedConfig.sentryDsn) {
     Sentry.init({
-      dsn: config.sentryDsn,
-      environment: config.environment || 'production',
-      release: config.release,
+      dsn: resolvedConfig.sentryDsn,
+      environment: resolvedConfig.environment || 'production',
+      release: resolvedConfig.release,
       tracesSampleRate: 0.2,
       replaysSessionSampleRate: 0.05,
       replaysOnErrorSampleRate: 1.0,
     });
   }
 
-  if (config.posthogKey) {
-    posthog.init(config.posthogKey, {
-      api_host: config.posthogHost || 'https://app.posthog.com',
+  if (resolvedConfig.posthogKey) {
+    posthog.init(resolvedConfig.posthogKey, {
+      api_host: resolvedConfig.posthogHost || 'https://app.posthog.com',
       person_profiles: 'identified_only',
       capture_pageview: true,
       capture_pageleave: true,

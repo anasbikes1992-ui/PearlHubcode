@@ -202,5 +202,22 @@ export default defineConfig(() => {
       include: sharedDeps,
       force: true,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (
+              id.includes("node_modules/react") ||
+              id.includes("node_modules/react-dom") ||
+              id.includes("node_modules/zustand") ||
+              id.includes("node_modules/@tanstack/react-query")
+            ) {
+              return "vendor";
+            }
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });

@@ -2,10 +2,13 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
+import { initMonitoring } from "./lib/monitoring";
 import "./index.css";
 import "./lib/i18n";
 
 import { router } from "./App.tsx";
+
+initMonitoring();
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
