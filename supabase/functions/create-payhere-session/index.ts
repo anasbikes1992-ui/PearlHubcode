@@ -159,6 +159,7 @@ Deno.serve(async (req: Request) => {
       .from("payment_transactions")
       .insert({
         payment_ref: paymentRef,
+        payhere_order_id: paymentRef,  // Store PayHere order ID for webhook verification
         idempotency_key: idempotencyKey,
         gateway: "payhere",
         amount: totalAmount,

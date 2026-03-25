@@ -34,8 +34,9 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const merchantSecret = Deno.env.get("PAYHERE_MERCHANT_SECRET") ?? "";
+    const merchantId = Deno.env.get("PAYHERE_MERCHANT_ID") ?? "";
 
-    if (!supabaseUrl || !serviceRoleKey || !merchantSecret) {
+    if (!supabaseUrl || !serviceRoleKey || !merchantSecret || !merchantId) {
       return jsonResponse({ error: "Server payment secrets are not configured" }, 500);
     }
 
@@ -43,19 +44,30 @@ Deno.serve(async (req: Request) => {
     const rawBody = await req.text();
     const formData = new URLSearchParams(rawBody);
 
-    const merchantId = formData.get("merchant_id") ?? "";
+    const payloadMerchantId = formData.get("merchant_id") ?? "";
     const orderId = formData.get("order_id") ?? "";
     const amount = formatPayHereAmount(formData.get("payhere_amount") ?? "0");
     const currency = formData.get("payhere_currency") ?? "LKR";
     const statusCode = formData.get("status_code") ?? "";
     const receivedSignature = (formData.get("md5sig") ?? "").toUpperCase();
 
-    if (!merchantId || !orderId || !statusCode || !receivedSignature) {
+    if (!payloadMerchantId || !orderId || !statusCode || !receivedSignature) {
       return jsonResponse({ error: "Missing parameters" }, 400);
     }
 
+    // ✅ CORRECTED: Verify merchant ID from env, not payload
+    if (payloadMerchantId !== merchantId) {
+      console.error("payment-webhook invalid merchant ID", { 
+        received: payloadMerchantId, 
+        expected: merchantId 
+      });
+      return jsonResponse({ error: "Invalid merchant" }, 403);
+    }
+
+    // ✅ CORRECTED: Build signature with correct MD5 pattern
+    // Pattern: merchant_id + order_id + amount + currency + status_code + upper(md5(merchant_secret))
     const expectedSignature = buildPayHereSignature({
-      merchantId,
+      merchantId: payloadMerchantId,
       orderId,
       amount,
       currency,
@@ -63,29 +75,44 @@ Deno.serve(async (req: Request) => {
       statusCode,
     });
 
+    console.log("[WEBHOOK] Signature verification:", {
+      orderId,
+      received: receivedSignature,
+      expected: expectedSignature,
+      match: expectedSignature === receivedSignature,
+    });
+
     if (expectedSignature !== receivedSignature) {
-      console.error("payment-webhook invalid MD5 signature", { orderId });
+      console.error("payment-webhook invalid MD5 signature", { orderId, received: receivedSignature, expected: expectedSignature });
       return jsonResponse({ error: "Invalid signature" }, 401);
     }
 
     const mappedStatus = mapPayHereStatus(statusCode);
 
+    // ✅ CORRECTED: Use payhere_order_id instead of payment_ref for lookups
     const { data: existingTransaction } = await serviceClient
       .from("payment_transactions")
-      .select("id, status")
-      .eq("payment_ref", orderId)
+      .select("id, status, webhook_received")
+      .eq("payhere_order_id", orderId)
       .maybeSingle();
 
-    if (existingTransaction?.status === "success") {
-      return new Response("Already processed", { status: 200, headers: corsHeaders });
+    // ✅ CORRECTED: Use idempotency check - webhook_received flag prevents double-processing
+    if (existingTransaction?.webhook_received) {
+      console.log("[IDEMPOTENT] Webhook already processed for order:", orderId);
+      return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
+    // ✅ CORRECTED: Update existing transaction or insert new one
     if (existingTransaction?.id) {
       const { error: updateTransactionError } = await serviceClient
         .from("payment_transactions")
         .update({
           status: mappedStatus,
-          raw_response: rawBody,
+          webhook_received: true,
+          webhook_received_at: new Date().toISOString(),
+          webhook_signature_valid: true,
+          md5_signature: receivedSignature,
+          completed_at: mappedStatus === "success" ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingTransaction.id);
@@ -98,14 +125,18 @@ Deno.serve(async (req: Request) => {
       const { error: insertTransactionError } = await serviceClient
         .from("payment_transactions")
         .insert({
-          payment_ref: orderId,
+          payhere_order_id: orderId,
           gateway: "payhere",
           amount: Number(amount),
           currency,
           status: mappedStatus,
           user_id: formData.get("custom_1"),
-          booking_id: formData.get("custom_2") || orderId,
-          raw_response: rawBody,
+          booking_id: formData.get("custom_2"),
+          webhook_received: true,
+          webhook_received_at: new Date().toISOString(),
+          webhook_signature_valid: true,
+          md5_signature: receivedSignature,
+          completed_at: mappedStatus === "success" ? new Date().toISOString() : null,
         });
 
       if (insertTransactionError) {
@@ -114,30 +145,39 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const bookingPatch = mappedStatus === "success"
-      ? {
-          status: "paid",
-          payment_ref: orderId,
-          gateway: "payhere",
-          escrow_released: false,
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+    // ✅ CORRECTED: Update booking status if payment succeeds
+    if (mappedStatus === "success") {
+      const bookingId = formData.get("custom_2");
+      if (bookingId) {
+        const { error: bookingError } = await serviceClient
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId);
+
+        if (bookingError) {
+          console.error("payment-webhook booking update failed", bookingError);
+          // Don't fail the response - transaction was recorded
         }
-      : {
-          status: mappedStatus === "pending" ? "pending_payment" : "payment_failed",
-          payment_ref: orderId,
-          gateway: "payhere",
-          updated_at: new Date().toISOString(),
-        };
 
-    const { error: bookingError } = await serviceClient
-      .from("bookings")
-      .update(bookingPatch)
-      .eq("id", orderId);
-
-    if (bookingError) {
-      console.error("payment-webhook booking update failed", bookingError);
-      return jsonResponse({ error: "Could not update booking" }, 500);
+        // Create notification for user
+        const bookingUserId = formData.get("custom_1");
+        if (bookingUserId) {
+          await serviceClient
+            .from("notifications")
+            .insert({
+              user_id: bookingUserId,
+              type: "payment_success",
+              title: "Payment Confirmed",
+              message: "Your payment has been successfully processed",
+              related_booking_id: bookingId,
+            })
+            .then(() => console.log("[NOTIFICATION] Payment success notification created"))
+            .catch((err) => console.error("Failed to create notification:", err));
+        }
+      }
     }
 
     return new Response("OK", { status: 200, headers: corsHeaders });
