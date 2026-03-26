@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 64" width="56" height="64">
+  <!-- Hexagonal diamond mark — standalone brandmark -->
+  <polygon points="28,2 54,18 54,46 28,62 2,46 2,18" fill="#B8943F"/>
+  <!-- Top facets -->
+  <polygon points="28,2 54,18 28,32" fill="#D4AF6A" opacity="0.55"/>
+  <polygon points="28,2 2,18 28,32" fill="#8B6914" opacity="0.45"/>
+  <!-- Bottom facets -->
+  <polygon points="28,62 54,46 28,32" fill="#8B6914" opacity="0.5"/>
+  <polygon points="28,62 2,46 28,32" fill="#D4AF6A" opacity="0.4"/>
+  <!-- Belt -->
+  <line x1="2" y1="18" x2="54" y2="18" stroke="#F5F0E8" stroke-width="1" opacity="0.45"/>
+  <line x1="2" y1="46" x2="54" y2="46" stroke="#F5F0E8" stroke-width="1" opacity="0.28"/>
+  <!-- Highlight sparkle -->
+  <circle cx="38" cy="12" r="2.5" fill="#FFFFFF" opacity="0.65"/>
+  <circle cx="43" cy="16" r="1.2" fill="#FFFFFF" opacity="0.35"/>
+</svg>

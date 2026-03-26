@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" width="280" height="64">
+  <!-- Diamond mark -->
+  <g transform="translate(4, 4)">
+    <!-- Outer diamond -->
+    <polygon points="28,2 54,18 54,46 28,62 2,46 2,18" fill="#B8943F"/>
+    <!-- Inner facet highlights -->
+    <polygon points="28,2 54,18 28,34" fill="#D4AF6A" opacity="0.5"/>
+    <polygon points="28,2 2,18 28,34" fill="#8B6914" opacity="0.4"/>
+    <polygon points="28,62 54,46 28,34" fill="#8B6914" opacity="0.5"/>
+    <polygon points="28,62 2,46 28,34" fill="#D4AF6A" opacity="0.35"/>
+    <!-- Center line -->
+    <line x1="2" y1="18" x2="54" y2="18" stroke="#F5F0E8" stroke-width="0.8" opacity="0.4"/>
+    <line x1="2" y1="46" x2="54" y2="46" stroke="#F5F0E8" stroke-width="0.8" opacity="0.25"/>
+  </g>
+
+  <!-- "PearlHub" wordmark -->
+  <text x="76" y="26" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#1A1A1A" letter-spacing="0.5">Pearl</text>
+  <text x="76" y="52" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#B8943F" letter-spacing="0.5">Hub</text>
+</svg>
