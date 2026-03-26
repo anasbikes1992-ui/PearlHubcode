@@ -29,7 +29,7 @@ const VehiclesPage = () => {
   } = useStore();
 
   // ── Filter state (must be declared before hook) ─────────
-  const [filter, setFilter] = useState({ type: "all", driver: "all", location: "" });
+  const [filter, setFilter] = useState({ type: "all", subtype: "all", driver: "all", location: "" });
   const navigate = useNavigate();
   const [showListModal, setShowListModal] = useState(false);
   const [editListing, setEditListing] = useState<any | null>(null);
@@ -38,6 +38,7 @@ const VehiclesPage = () => {
   const { data: vehicles = [], isLoading: vehiclesLoading } = useVehicles({
     location: filter.location || undefined,
     vehicle_type: filter.type !== "all" ? filter.type : undefined,
+    listing_subtype: filter.subtype !== "all" ? filter.subtype : undefined,
     with_driver: filter.driver === "included" ? true : filter.driver === "optional" ? false : undefined,
   });
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
@@ -49,7 +50,15 @@ const VehiclesPage = () => {
   const [showTracker, setShowTracker] = useState(false);
   const [trackerVehicle, setTrackerVehicle] = useState<Vehicle | null>(null);
 
-  const vehicleTypes = [{ id: "all", label: "All" }, { id: "car", label: "Cars" }, { id: "van", label: "Vans" }, { id: "suv", label: "SUVs" }, { id: "bus", label: "Buses" }, { id: "luxury_coach", label: "Luxury Coach" }];
+  const vehicleTypes = [
+    { id: "all", label: "All" },
+    { id: "car", label: "Cars" },
+    { id: "van", label: "Vans" },
+    { id: "suv", label: "SUVs" },
+    { id: "bus", label: "Buses" },
+    { id: "coach", label: "Coach / Luxury" },
+    { id: "airport", label: "Airport Transfer" },
+  ];
 
   // Vehicles are pre-filtered by the useVehicles hook (server-side via Supabase query)
   const filtered = vehicles;
@@ -138,10 +147,22 @@ const VehiclesPage = () => {
 
       <div className="bg-card border-b border-border py-3">
         <div className="container flex gap-2 items-center flex-wrap">
-          {vehicleTypes.map(t => (
-            <button key={t.id} onClick={() => setFilter({...filter, type: t.id})}
-              className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium border transition-all ${filter.type === t.id ? "bg-ruby text-pearl border-ruby" : "bg-transparent text-muted-foreground border-input"}`}>{t.label}</button>
-          ))}
+          {vehicleTypes.map(t => {
+            const isActive = t.id === 'airport'
+              ? filter.subtype === 'airport_transfer'
+              : t.id === 'coach'
+              ? filter.subtype === 'coach'
+              : filter.type === t.id && filter.subtype === 'all';
+            const handleClick = () => {
+              if (t.id === 'airport') setFilter({...filter, type: 'all', subtype: 'airport_transfer'});
+              else if (t.id === 'coach') setFilter({...filter, type: 'all', subtype: 'coach'});
+              else setFilter({...filter, type: t.id, subtype: 'all'});
+            };
+            return (
+              <button key={t.id} onClick={handleClick}
+                className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium border transition-all ${isActive ? "bg-ruby text-pearl border-ruby" : "bg-transparent text-muted-foreground border-input"}`}>{t.label}</button>
+            );
+          })}
           <div className="ml-auto flex gap-2">
             <select value={filter.driver} onChange={e => setFilter({...filter, driver: e.target.value})} className="rounded-md border border-input px-3 py-1.5 text-sm bg-card w-auto">
               <option value="all">With / Without Driver</option><option value="included">Driver Included</option><option value="optional">Self Drive</option>

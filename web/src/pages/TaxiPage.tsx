@@ -39,6 +39,22 @@ const TaxiPage = () => {
   const [phone, setPhone] = useState("");
   const [packageSize, setPackageSize] = useState("Medium");
 
+  // Coordinates for distance calculation
+  const [pickupCoords, setPickupCoords] = useState<[number, number]>([6.9271, 79.8612]);
+  const [dropCoords, setDropCoords] = useState<[number, number] | null>(null);
+  const [selectingPin, setSelectingPin] = useState<"pickup" | "drop" | null>(null);
+
+  // Haversine great-circle distance
+  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  const estimatedKm = dropCoords ? Math.max(1, Math.round(haversineKm(pickupCoords[0], pickupCoords[1], dropCoords[0], dropCoords[1]) * 10) / 10) : 8;
+
   // Auto-select first category when categories load (must be in useEffect, not render body)
   useEffect(() => {
     if (categories.length > 0 && !selectedCat) {
@@ -61,9 +77,9 @@ const TaxiPage = () => {
     }
   };
 
-  // Fare engine
+  // Fare engine — uses real Haversine KM when both pins set
   const calcFare = (cat: TaxiVehicleCategory) => {
-    const km = 8; // placeholder — real distance from Directions API
+    const km = estimatedKm;
     let fare = cat.base_fare + km * cat.per_km_rate;
     if (promoResult) {
       fare = promoResult.type === "percentage" ? fare * (1 - promoResult.amount / 100) : fare - promoResult.amount;
@@ -79,9 +95,9 @@ const TaxiPage = () => {
     const rideData = {
       customer_id: user.id,
       vehicle_category_id: selectedCat.id,
-      pickup_lat: 6.9271, pickup_lng: 79.8612, pickup_address: pickup,
-      dropoff_lat: 6.9344, dropoff_lng: 79.8428, dropoff_address: stops[0],
-      fare, distance_km: 8, ride_module: mode,
+      pickup_lat: pickupCoords[0], pickup_lng: pickupCoords[1], pickup_address: pickup,
+      dropoff_lat: dropCoords?.[0] ?? 6.9344, dropoff_lng: dropCoords?.[1] ?? 79.8428, dropoff_address: stops[0],
+      fare, distance_km: estimatedKm, ride_module: mode,
       payment_method: paymentMethod,
       scheduled_for: scheduleTime || null,
       promo_id: promoId,
@@ -120,7 +136,10 @@ const TaxiPage = () => {
   };
 
   const isFormValid = pickup !== "" && stops[0] !== "" && selectedCat !== null;
-  const mapMarkers = [{ lat: 6.9271, lng: 79.8612, title: "You", location: pickup, emoji: "📍", type: "pickup" as const }];
+  const mapMarkers = [
+    { lat: pickupCoords[0], lng: pickupCoords[1], title: "Pickup", location: pickup, emoji: "📍", type: "pickup" as const },
+    ...(dropCoords ? [{ lat: dropCoords[0], lng: dropCoords[1], title: "Drop-off", location: stops[0], emoji: "🏁", type: "vehicle" as const }] : []),
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,8 +161,25 @@ const TaxiPage = () => {
 
       <div className="container py-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Map Column */}
-        <div className="lg:col-span-3 rounded-xl overflow-hidden border border-border" style={{ minHeight: "500px" }}>
-          <LeafletMap markers={mapMarkers} center={[6.9271, 79.8612]} zoom={13} height="100%" />
+        <div className="lg:col-span-3 space-y-2">
+          <div className="flex gap-2 text-xs">
+            <button onClick={() => setSelectingPin(p => p === 'pickup' ? null : 'pickup')} className={`px-3 py-1.5 rounded-full font-bold border transition-all ${selectingPin === 'pickup' ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground'}`}>📍 Set Pickup</button>
+            <button onClick={() => setSelectingPin(p => p === 'drop' ? null : 'drop')} className={`px-3 py-1.5 rounded-full font-bold border transition-all ${selectingPin === 'drop' ? 'bg-ruby text-white border-ruby' : 'border-border text-muted-foreground'}`}>🏁 Set Drop-off</button>
+            {dropCoords && <span className="ml-auto px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">~{estimatedKm} km</span>}
+          </div>
+          {selectingPin && <p className="text-xs text-muted-foreground text-center">Click on the map to set {selectingPin === 'pickup' ? '📍 pickup' : '🏁 drop-off'} location</p>}
+          <div className="rounded-xl overflow-hidden border border-border" style={{ minHeight: "500px" }}>
+            <LeafletMap
+              markers={mapMarkers}
+              center={pickupCoords}
+              zoom={13}
+              height="100%"
+              onSelectLocation={(lat, lng) => {
+                if (selectingPin === 'pickup') { setPickupCoords([lat, lng]); setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`); setSelectingPin(null); }
+                else if (selectingPin === 'drop') { setDropCoords([lat, lng]); setStops([`${lat.toFixed(4)}, ${lng.toFixed(4)}`]); setSelectingPin(null); }
+              }}
+            />
+          </div>
         </div>
 
         {/* Booking Panel */}

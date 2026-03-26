@@ -51,11 +51,27 @@ const LeafletMap = ({ markers = [], center = [7.8731, 80.7718], zoom = 8, height
     const map = window.L.map(mapRef.current).setView(center, zoom);
     mapInstanceRef.current = map;
 
-    window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      attribution: '© OpenStreetMap contributors © CARTO',
-      subdomains: 'abcd',
-      maxZoom: 20
-    }).addTo(map);
+    // Primary tiles: CartoCDN (nicer style)
+    const cartoLayer = window.L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      { attribution: '© OpenStreetMap contributors © CARTO', subdomains: 'abcd', maxZoom: 20 }
+    );
+
+    // Fallback: OpenStreetMap if CartoCDN fails
+    const osmLayer = window.L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19 }
+    );
+
+    cartoLayer.on("tileerror", () => {
+      if (map && !map._osmFallback) {
+        map._osmFallback = true;
+        cartoLayer.remove();
+        osmLayer.addTo(map);
+      }
+    });
+
+    cartoLayer.addTo(map);
 
     if (onSelectLocation) {
       map.on("click", (e: any) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase, db } from '@/integrations/supabase/client';
 import { Navigate } from 'react-router-dom';
@@ -14,7 +14,7 @@ import { ListingStatus, type Stay, type PearlEvent, type Property, type SocialPo
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
 
-type AdminTab = 'overview' | 'gods_view' | 'stays' | 'vehicles' | 'taxi' | 'events' | 'properties' | 'social' | 'sme' | 'users' | 'finance' | 'coupons' | 'alerts' | 'ops' | 'pages' | 'settings';
+type AdminTab = 'overview' | 'gods_view' | 'stays' | 'vehicles' | 'taxi' | 'office_transport' | 'airport' | 'parcels' | 'events' | 'properties' | 'social' | 'sme' | 'users' | 'finance' | 'coupons' | 'alerts' | 'ops' | 'pages' | 'settings';
 
 const StatusBadge = ({ status }: { status: ListingStatus }) => {
   const variants: Record<ListingStatus, string> = {
@@ -225,6 +225,9 @@ export default function AdminDashboard() {
     { id: 'stays', label: 'Stays', icon: '🏨', count: stats.stays },
     { id: 'vehicles', label: 'Vehicles', icon: '🚗', count: stats.vehicles },
     { id: 'taxi', label: 'Taxi', icon: '🚕' },
+    { id: 'office_transport', label: 'Office Transport', icon: '🚌' },
+    { id: 'airport', label: 'Airport', icon: '✈️' },
+    { id: 'parcels', label: 'Parcels', icon: '📦' },
     { id: 'events', label: 'Events', icon: '🎭', count: stats.events },
     { id: 'properties', label: 'Props', icon: '🏡', count: stats.properties },
     { id: 'social', label: 'Social', icon: '🌏', count: stats.social },
@@ -373,6 +376,11 @@ export default function AdminDashboard() {
           <AdvancedVehicleManager />
         )}
 
+        {/* Vehicles Marketplace Admin */}
+        {tab === 'vehicles' && (
+          <VehiclesAdminPanel />
+        )}
+
         {/* Events Enhanced */}
         {tab === 'events' && (
           <EventsEnhancedPanel
@@ -471,6 +479,24 @@ export default function AdminDashboard() {
         {tab === 'coupons' && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <CouponsPanel />
+          </motion.div>
+        )}
+
+        {tab === 'office_transport' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <OfficeTransportAdminPanel />
+          </motion.div>
+        )}
+
+        {tab === 'airport' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <AirportAdminPanel />
+          </motion.div>
+        )}
+
+        {tab === 'parcels' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <ParcelsAdminPanel />
           </motion.div>
         )}
 
@@ -1710,293 +1736,472 @@ function SupabaseSettingsPanel() {
   );
 }
 
-// ── Advanced Vehicle Manager Component ─────────────────────
-type FleetVehicle = {
-  id: number;
-  title: string;
-  category: string;
-  capacity: number;
-  pricePerDay: number;
-  description: string;
-  features: string[];
-  status: 'active' | 'maintenance' | 'inactive';
-};
-
-type CategoryRate = {
-  category: string;
-  baseFare: number;
-  perKm: number;
-  perMin: number;
-  commission: number;
-};
-
+// ── Taxi Admin Component (DB-persisted) ─────────────────────
 function AdvancedVehicleManager() {
-  const [vehicles, setVehicles] = useState<FleetVehicle[]>([
-    { id: 1, title: 'Eco-Friendly Toyota Prius', category: 'Car Economy', capacity: 4, pricePerDay: 2500, description: 'Fuel-efficient sedan', features: ['AC', 'ABS', 'Power steering'], status: 'active' },
-    { id: 2, title: 'Luxury Passenger Van', category: 'Buddy Van', capacity: 8, pricePerDay: 12500, description: 'Fleet vehicle', features: ['AC', 'WiFi', 'USB ports'], status: 'active' },
-    { id: 3, title: 'Premium Montero SUV', category: 'SUV', capacity: 7, pricePerDay: 25000, description: 'Premium SUV', features: ['Panoramic roof', 'Leather seats', 'Navigation'], status: 'active' },
-  ]);
-
-  const [categoryRates, setCategoryRates] = useState<CategoryRate[]>([
-    { category: 'Moto', baseFare: 50, perKm: 8, perMin: 1, commission: 10 },
-    { category: 'TUK TUK', baseFare: 100, perKm: 12, perMin: 1.5, commission: 12 },
-    { category: 'Car Economy', baseFare: 150, perKm: 20, perMin: 2, commission: 15 },
-    { category: 'Car Electric', baseFare: 180, perKm: 22, perMin: 2.5, commission: 15 },
-    { category: 'Buddy Van', baseFare: 250, perKm: 25, perMin: 3, commission: 18 },
-    { category: 'SUV', baseFare: 300, perKm: 35, perMin: 4, commission: 20 },
-  ]);
-
-  const [editingModal, setEditingModal] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<FleetVehicle | null>(null);
-  const [editingRate, setEditingRate] = useState<CategoryRate | null>(null);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [ratesModal, setRatesModal] = useState(false);
-  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<any | null>(null);
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.2);
   const [peakMode, setPeakMode] = useState(false);
-  const [simCategory, setSimCategory] = useState('Car Economy');
+  const [simCategory, setSimCategory] = useState('');
   const [simKm, setSimKm] = useState(8);
   const [simMin, setSimMin] = useState(12);
+  const [liveRides, setLiveRides] = useState<any[]>([]);
+  const [newCatModal, setNewCatModal] = useState(false);
+  const [newCat, setNewCat] = useState({ name: '', icon: '🚗', base_fare: 0, per_km_rate: 0, per_min_rate: 0, commission_pct: 15, capacity: 4 });
+  const [toast, setToast] = useState<string | null>(null);
 
-  const filteredVehicles = vehicles.filter(v => {
-    const matchStatus = filterStatus === 'all' || v.status === filterStatus;
-    const matchCategory = filterCategory === 'all' || v.category === filterCategory;
-    const matchSearch = searchTerm === '' || v.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStatus && matchCategory && matchSearch;
-  });
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
-  const handleSaveVehicle = (vehicle: FleetVehicle | null) => {
-    if (!vehicle) return;
-    if (editingVehicle?.id) {
-      setVehicles(vehicles.map(v => v.id === vehicle.id ? vehicle : v));
+  const loadCategories = async () => {
+    setLoading(true);
+    const { data } = await db.from('taxi_vehicle_categories').select('*').eq('service_type', 'taxi').eq('is_active', true).order('base_fare', { ascending: true });
+    setCategories(data ?? []);
+    if (data?.length) setSimCategory(data[0].name);
+    setLoading(false);
+  };
+
+  const loadLiveRides = async () => {
+    const { data } = await db.from('taxi_rides').select('id,status,pickup_address,dropoff_address,fare,created_at').order('created_at', { ascending: false }).limit(10);
+    setLiveRides(data ?? []);
+  };
+
+  useEffect(() => { loadCategories(); loadLiveRides(); }, []);
+
+  const handleSaveRate = async () => {
+    if (!editRow) return;
+    setSavingId(editRow.id);
+    const { error } = await db.from('taxi_vehicle_categories').update({
+      base_fare: editRow.base_fare,
+      per_km_rate: editRow.per_km_rate,
+      per_min_rate: editRow.per_min_rate,
+      commission_pct: editRow.commission_pct,
+      capacity: editRow.capacity,
+    }).eq('id', editRow.id);
+    setSavingId(null);
+    if (!error) {
+      setCategories(cats => cats.map(c => c.id === editRow.id ? { ...c, ...editRow } : c));
+      setEditRow(null);
+      showToast('✅ Rates saved to database');
     } else {
-      setVehicles([...vehicles, { ...vehicle, id: Date.now() }]);
-    }
-    setEditingModal(false);
-    setEditingVehicle(null);
-  };
-
-  const handleDeleteVehicle = (id: number) => {
-    if (confirm('Delete this vehicle?')) {
-      setVehicles(vehicles.filter(v => v.id !== id));
+      showToast('❌ Save failed: ' + error.message);
     }
   };
 
-  const handleSaveRate = () => {
-    if (editingRate) {
-      setCategoryRates(categoryRates.map(r => r.category === editingRate.category ? editingRate : r));
-      setEditingRate(null);
+  const handleToggleActive = async (cat: any) => {
+    const { error } = await db.from('taxi_vehicle_categories').update({ is_active: !cat.is_active }).eq('id', cat.id);
+    if (!error) {
+      setCategories(cats => cats.map(c => c.id === cat.id ? { ...c, is_active: !c.is_active } : c));
+      showToast(cat.is_active ? '⏸ Category deactivated' : '✅ Category activated');
     }
   };
 
-  const handleBulkApply = (multiplier: number) => {
-    setCategoryRates(categoryRates.map(r => ({
-      ...r,
-      baseFare: Math.round(r.baseFare * multiplier),
-      perKm: Math.round(r.perKm * multiplier * 100) / 100,
-      perMin: Math.round(r.perMin * multiplier * 100) / 100,
-    })));
-    setBulkEditMode(false);
+  const handleCreateCategory = async () => {
+    const { error } = await db.from('taxi_vehicle_categories').insert({ ...newCat, service_type: 'taxi', is_active: true });
+    if (!error) { setNewCatModal(false); setNewCat({ name: '', icon: '🚗', base_fare: 0, per_km_rate: 0, per_min_rate: 0, commission_pct: 15, capacity: 4 }); loadCategories(); showToast('✅ Category created'); }
+    else showToast('❌ ' + error.message);
   };
 
-  const stats = {
-    total: vehicles.length,
-    active: vehicles.filter(v => v.status === 'active').length,
-    available: vehicles.filter(v => v.status === 'active' && Math.random() > 0.3).length,
-    maintenance: vehicles.filter(v => v.status === 'maintenance').length,
-  };
-
-  const rateForSim = categoryRates.find((r) => r.category === simCategory) || categoryRates[0];
+  const simCat = categories.find(c => c.name === simCategory) || categories[0];
   const activeMultiplier = peakMode ? surgeMultiplier : 1;
-  const farePreview = Math.round((rateForSim.baseFare + (rateForSim.perKm * simKm) + (rateForSim.perMin * simMin)) * activeMultiplier);
+  const farePreview = simCat ? Math.round((simCat.base_fare + simCat.per_km_rate * simKm + (simCat.per_min_rate || 0) * simMin) * activeMultiplier) : 0;
 
   return (
     <div className="space-y-8">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Toast */}
+      {toast && <div className="fixed top-6 right-6 z-50 bg-zinc-900 border border-white/10 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold">{toast}</div>}
+
+      {/* Header stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Vehicles', value: stats.total, icon: '🚕', color: 'text-sapphire-500 bg-sapphire-500/10' },
-          { label: 'Active Fleet', value: stats.active, icon: '✅', color: 'text-emerald-500 bg-emerald-500/10' },
-          { label: 'Available Now', value: stats.available, icon: '🟢', color: 'text-lime-500 bg-lime-500/10' },
-          { label: 'In Maintenance', value: stats.maintenance, icon: '🔧', color: 'text-amber-500 bg-amber-500/10' },
-        ].map((stat) => (
-          <div key={stat.label} className={`rounded-2xl p-6 border border-white/10 group hover:border-white/20 transition-all ${stat.color}`}>
-            <div className="text-3xl mb-2">{stat.icon}</div>
-            <div className="text-2xl font-black text-pearl">{stat.value}</div>
-            <div className="text-[10px] uppercase font-black tracking-widest text-mist mt-1">{stat.label}</div>
+          { label: 'Active Categories', value: categories.filter(c => c.is_active).length, icon: '🚕', color: 'text-amber-400' },
+          { label: 'Live Rides', value: liveRides.filter(r => r.status === 'in_progress').length, icon: '🟢', color: 'text-emerald-400' },
+          { label: 'Completed Today', value: liveRides.filter(r => r.status === 'completed').length, icon: '✅', color: 'text-primary' },
+          { label: 'Peak Mode', value: peakMode ? 'ON' : 'OFF', icon: '⚡', color: peakMode ? 'text-orange-400' : 'text-mist' },
+        ].map(s => (
+          <div key={s.label} className="bg-white/5 rounded-2xl border border-white/10 p-5">
+            <div className="text-2xl mb-1">{s.icon}</div>
+            <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+            <div className="text-mist text-[10px] font-bold uppercase tracking-widest">{s.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Controls row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Surge Controls */}
         <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
-          <h3 className="text-sm font-black uppercase tracking-widest text-pearl mb-4">Taxi Dynamic Controls</h3>
+          <h3 className="text-sm font-black uppercase tracking-widest text-pearl mb-4">Dynamic Pricing Controls</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-mist">Peak Mode</span>
-              <Switch checked={peakMode} onCheckedChange={setPeakMode} className="data-[state=checked]:bg-emerald-500" />
+              <Switch checked={peakMode} onCheckedChange={setPeakMode} className="data-[state=checked]:bg-orange-500" />
             </div>
             <div>
               <div className="flex items-center justify-between text-xs mb-2">
                 <span className="font-black uppercase tracking-wider text-mist">Surge Multiplier</span>
-                <span className="font-black text-primary">x{surgeMultiplier.toFixed(2)}</span>
+                <span className={`font-black ${peakMode ? 'text-orange-400' : 'text-mist'}`}>x{surgeMultiplier.toFixed(2)}</span>
               </div>
-              <input
-                type="range"
-                min={1}
-                max={2.5}
-                step={0.05}
-                value={surgeMultiplier}
-                onChange={(e) => setSurgeMultiplier(Number(e.target.value))}
-                className="w-full"
-              />
+              <input type="range" min={1} max={2.5} step={0.05} value={surgeMultiplier} onChange={e => setSurgeMultiplier(Number(e.target.value))} className="w-full" />
             </div>
             <div className="flex flex-wrap gap-2">
-              {[1, 1.15, 1.3, 1.5, 2].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setSurgeMultiplier(m)}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-mist hover:bg-primary/20 hover:text-white"
-                >
-                  x{m.toFixed(2)}
-                </button>
+              {[1, 1.15, 1.3, 1.5, 2].map(m => (
+                <button key={m} onClick={() => setSurgeMultiplier(m)} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${surgeMultiplier === m ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-mist hover:bg-primary/20 hover:text-white'}`}>x{m.toFixed(2)}</button>
               ))}
             </div>
           </div>
         </div>
 
+        {/* Fare Simulator */}
         <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
           <h3 className="text-sm font-black uppercase tracking-widest text-pearl mb-4">Fare Simulator</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-            <select value={simCategory} onChange={(e) => setSimCategory(e.target.value)} className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
-              {categoryRates.map((r) => <option key={r.category} value={r.category}>{r.category}</option>)}
+            <select value={simCategory} onChange={e => setSimCategory(e.target.value)} className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+              {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
             </select>
-            <input type="number" min={1} value={simKm} onChange={(e) => setSimKm(Number(e.target.value || 0))} className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" placeholder="KM" />
-            <input type="number" min={0} value={simMin} onChange={(e) => setSimMin(Number(e.target.value || 0))} className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" placeholder="Minutes" />
+            <input type="number" min={1} value={simKm} onChange={e => setSimKm(Number(e.target.value || 0))} className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" placeholder="KM" />
+            <input type="number" min={0} value={simMin} onChange={e => setSimMin(Number(e.target.value || 0))} className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" placeholder="Minutes" />
           </div>
           <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
-            <div className="text-[10px] font-black uppercase tracking-widest text-mist">Estimated Fare</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-mist">Estimated Fare{peakMode ? ' (Surge)' : ''}</div>
             <div className="text-2xl font-black text-primary mt-1">Rs. {farePreview.toLocaleString()}</div>
-            <div className="text-[10px] text-mist mt-1">Formula: (base + km + min) x surge</div>
+            <div className="text-[10px] text-mist mt-1">base + {simCat?.per_km_rate ?? 0}/km + {simCat?.per_min_rate ?? 0}/min × {activeMultiplier.toFixed(2)} surge</div>
           </div>
         </div>
       </div>
 
-      {/* Vehicle Management */}
+      {/* Category Rates — DB-backed */}
       <div className="bg-white/5 rounded-3xl border border-white/10 p-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-black text-white uppercase tracking-widest flex items-center gap-3">
-            <span className="w-2 h-6 bg-primary rounded-full"></span> Fleet Inventory
+            <span className="w-2 h-6 bg-amber-500 rounded-full" /> Category Rates
           </h2>
-          <Button
-            onClick={() => {
-              setEditingVehicle(null);
-              setEditingModal(true);
-            }}
-            className="bg-primary hover:bg-gold-light text-white font-black h-10 px-6 rounded-xl flex items-center gap-2"
-          >
-            ➕ Add Vehicle
+          <Button onClick={() => setNewCatModal(true)} className="bg-primary hover:bg-gold-light text-white font-black h-10 px-6 rounded-xl">
+            ➕ New Category
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <input
-            type="text"
-            placeholder="🔍 Search vehicles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-mist/40 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-          />
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-          >
-            <option value="all">All Categories</option>
-            {Array.from(new Set(vehicles.map(v => v.category))).map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-40"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead><tr className="border-b border-white/5">
+                {['Category', 'Base Fare', 'Per KM', 'Per Min', 'Commission', 'Capacity', 'Status', 'Actions'].map(h => (
+                  <th key={h} className="px-4 py-3 text-[10px] font-black text-mist uppercase tracking-widest">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-white/5">
+                {categories.map(cat => (
+                  <tr key={cat.id} className="hover:bg-white/5 transition-colors group">
+                    <td className="px-4 py-3"><div className="flex items-center gap-2"><span className="text-xl">{cat.icon}</span><span className="font-bold text-pearl">{cat.name}</span></div></td>
+                    {editRow?.id === cat.id ? (
+                      <>
+                        <td className="px-4 py-3"><input type="number" value={editRow.base_fare} onChange={e => setEditRow({...editRow, base_fare: +e.target.value})} className="w-24 bg-zinc-800 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" /></td>
+                        <td className="px-4 py-3"><input type="number" step="0.5" value={editRow.per_km_rate} onChange={e => setEditRow({...editRow, per_km_rate: +e.target.value})} className="w-24 bg-zinc-800 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" /></td>
+                        <td className="px-4 py-3"><input type="number" step="0.5" value={editRow.per_min_rate ?? 0} onChange={e => setEditRow({...editRow, per_min_rate: +e.target.value})} className="w-24 bg-zinc-800 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" /></td>
+                        <td className="px-4 py-3"><input type="number" step="0.5" value={editRow.commission_pct ?? 15} onChange={e => setEditRow({...editRow, commission_pct: +e.target.value})} className="w-24 bg-zinc-800 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" /></td>
+                        <td className="px-4 py-3"><input type="number" value={editRow.capacity ?? 4} onChange={e => setEditRow({...editRow, capacity: +e.target.value})} className="w-20 bg-zinc-800 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" /></td>
+                        <td className="px-4 py-3" />
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button onClick={handleSaveRate} disabled={savingId === cat.id} className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-black hover:bg-emerald-500 hover:text-white transition-all">
+                              {savingId === cat.id ? '…' : 'Save'}
+                            </button>
+                            <button onClick={() => setEditRow(null)} className="px-3 py-1 bg-white/10 text-mist rounded-lg text-[10px] font-black hover:bg-white/20 transition-all">Cancel</button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 font-bold text-pearl">Rs. {cat.base_fare}</td>
+                        <td className="px-4 py-3 text-mist">Rs. {cat.per_km_rate}</td>
+                        <td className="px-4 py-3 text-mist">Rs. {cat.per_min_rate ?? 0}</td>
+                        <td className="px-4 py-3"><span className="text-xs font-black text-primary bg-primary/10 px-2 py-1 rounded-lg">{cat.commission_pct ?? 15}%</span></td>
+                        <td className="px-4 py-3 text-mist">{cat.capacity ?? 4} seats</td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => handleToggleActive(cat)} className={`px-3 py-1 rounded-lg text-[10px] font-black ${cat.is_active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-mist/10 text-mist'}`}>
+                            {cat.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => setEditRow({ ...cat })} className="opacity-0 group-hover:opacity-100 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black hover:bg-primary hover:text-white transition-all">Edit</button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-        {/* Vehicle Table */}
-        <div className="overflow-x-auto">
+      {/* Live Rides */}
+      <div className="bg-white/5 rounded-3xl border border-white/10 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-black text-white uppercase tracking-widest flex items-center gap-3">
+            <span className="w-2 h-6 bg-emerald-500 rounded-full" /> Live Rides
+          </h2>
+          <button onClick={loadLiveRides} className="px-4 py-2 text-xs font-black bg-white/5 border border-white/10 text-mist rounded-xl hover:bg-white/10 transition-all">↻ Refresh</button>
+        </div>
+        {liveRides.length === 0 ? (
+          <div className="text-center py-12 text-mist text-sm">No ride data — make sure taxi_rides table exists and has records.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead><tr className="border-b border-white/5">
+                {['ID', 'Status', 'Pickup', 'Dropoff', 'Fare', 'Time'].map(h => (
+                  <th key={h} className="px-4 py-3 text-[10px] font-black text-mist uppercase tracking-widest">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-white/5">
+                {liveRides.map(ride => (
+                  <tr key={ride.id} className="hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3 text-[10px] font-mono text-mist">{ride.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-[10px] font-black ${ride.status === 'in_progress' ? 'bg-emerald-500/20 text-emerald-400' : ride.status === 'completed' ? 'bg-primary/20 text-primary' : 'bg-mist/10 text-mist'}`}>{ride.status}</span></td>
+                    <td className="px-4 py-3 text-mist text-xs truncate max-w-[140px]">{ride.pickup_address || '—'}</td>
+                    <td className="px-4 py-3 text-mist text-xs truncate max-w-[140px]">{ride.dropoff_address || '—'}</td>
+                    <td className="px-4 py-3 font-bold text-pearl">Rs. {(ride.fare || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-mist text-xs">{ride.created_at ? new Date(ride.created_at).toLocaleTimeString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* New Category Modal */}
+      <Dialog open={newCatModal} onOpenChange={setNewCatModal}>
+        <DialogContent className="sm:max-w-xl bg-zinc-950 border-white/10 text-white rounded-[2.5rem] p-8">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-widest">New Taxi Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Name *</label>
+                <input value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" placeholder="e.g., Car Premium" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Icon Emoji</label>
+                <input value={newCat.icon} onChange={e => setNewCat({...newCat, icon: e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" placeholder="🚗" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Base Fare (LKR)</label>
+                <input type="number" value={newCat.base_fare} onChange={e => setNewCat({...newCat, base_fare: +e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Per KM (LKR)</label>
+                <input type="number" step="0.5" value={newCat.per_km_rate} onChange={e => setNewCat({...newCat, per_km_rate: +e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Per Min</label>
+                <input type="number" step="0.5" value={newCat.per_min_rate} onChange={e => setNewCat({...newCat, per_min_rate: +e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Commission %</label>
+                <input type="number" step="0.5" value={newCat.commission_pct} onChange={e => setNewCat({...newCat, commission_pct: +e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Capacity</label>
+                <input type="number" value={newCat.capacity} onChange={e => setNewCat({...newCat, capacity: +e.target.value})} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" />
+              </div>
+            </div>
+            <div className="flex gap-4 pt-4">
+              <Button onClick={() => setNewCatModal(false)} variant="outline" className="flex-1">Cancel</Button>
+              <Button onClick={handleCreateCategory} className="flex-1 bg-primary hover:bg-gold-light text-white font-black">Create Category</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+
+
+
+// ── Vehicles Marketplace Admin Panel (DB-persisted) ──────────
+function VehiclesAdminPanel() {
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [editModal, setEditModal] = useState(false);
+  const [editVehicle, setEditVehicle] = useState<any | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await db.from('vehicles_listings').select('*').order('created_at', { ascending: false });
+    setVehicles(data ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
+    if (!editVehicle) return;
+    setSaving(true);
+    const isNew = !editVehicle.id;
+    if (isNew) {
+      const { error } = await db.from('vehicles_listings').insert({
+        title: editVehicle.title,
+        vehicle_type: editVehicle.vehicle_type || 'car',
+        listing_subtype: editVehicle.listing_subtype || 'rental',
+        price_per_day: editVehicle.price_per_day || 0,
+        with_driver: editVehicle.with_driver ?? false,
+        capacity: editVehicle.capacity || 4,
+        description: editVehicle.description || '',
+        features: editVehicle.features || [],
+        status: editVehicle.status || 'active',
+        moderation_status: 'approved',
+        active: true,
+        fuel: editVehicle.fuel || 'Petrol',
+        currency: 'LKR',
+      });
+      if (error) showToast('❌ ' + error.message);
+      else { showToast('✅ Vehicle created'); load(); }
+    } else {
+      const { error } = await db.from('vehicles_listings').update({
+        title: editVehicle.title,
+        vehicle_type: editVehicle.vehicle_type,
+        listing_subtype: editVehicle.listing_subtype,
+        price_per_day: editVehicle.price_per_day,
+        with_driver: editVehicle.with_driver,
+        capacity: editVehicle.capacity,
+        description: editVehicle.description,
+        features: editVehicle.features,
+        status: editVehicle.status,
+        fuel: editVehicle.fuel,
+      }).eq('id', editVehicle.id);
+      if (error) showToast('❌ ' + error.message);
+      else {
+        setVehicles(vs => vs.map(v => v.id === editVehicle.id ? { ...v, ...editVehicle } : v));
+        showToast('✅ Vehicle updated');
+      }
+    }
+    setSaving(false);
+    setEditModal(false);
+    setEditVehicle(null);
+  };
+
+  const handleModerate = async (id: string, status: string) => {
+    const { error } = await db.from('vehicles_listings').update({ moderation_status: status, active: status === 'approved' }).eq('id', id);
+    if (!error) {
+      setVehicles(vs => vs.map(v => v.id === id ? { ...v, moderation_status: status, active: status === 'approved' } : v));
+      showToast(status === 'approved' ? '✅ Approved & published' : '⏸ Suspended');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this vehicle listing?')) return;
+    const { error } = await db.from('vehicles_listings').delete().eq('id', id);
+    if (!error) { setVehicles(vs => vs.filter(v => v.id !== id)); showToast('🗑 Deleted'); }
+    else showToast('❌ ' + error.message);
+  };
+
+  const filtered = vehicles.filter(v => {
+    const matchSearch = !search || (v.title || '').toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === 'all' || v.listing_subtype === typeFilter || v.vehicle_type === typeFilter;
+    const matchStatus = statusFilter === 'all' || v.moderation_status === statusFilter || v.status === statusFilter;
+    return matchSearch && matchType && matchStatus;
+  });
+
+  return (
+    <div className="space-y-8">
+      {toast && <div className="fixed top-6 right-6 z-50 bg-zinc-900 border border-white/10 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold">{toast}</div>}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Listings', value: vehicles.length, icon: '🚗', color: 'text-sapphire' },
+          { label: 'Approved', value: vehicles.filter(v => v.moderation_status === 'approved').length, icon: '✅', color: 'text-emerald-400' },
+          { label: 'Pending Review', value: vehicles.filter(v => v.moderation_status === 'pending').length, icon: '⏳', color: 'text-amber-400' },
+          { label: 'Suspended', value: vehicles.filter(v => v.moderation_status === 'rejected' || v.active === false).length, icon: '🚫', color: 'text-ruby' },
+        ].map(s => (
+          <div key={s.label} className="bg-white/5 rounded-2xl border border-white/10 p-5">
+            <div className="text-2xl mb-1">{s.icon}</div>
+            <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+            <div className="text-mist text-[10px] font-bold uppercase tracking-widest">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search vehicles…" className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white w-64 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
+          <option value="all">All Types</option>
+          <option value="rental">Rental</option>
+          <option value="coach">Coach / Luxury</option>
+          <option value="airport_transfer">Airport Transfer</option>
+          <option value="car">Car</option>
+          <option value="van">Van</option>
+          <option value="suv">SUV</option>
+          <option value="bus">Bus</option>
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
+          <option value="all">All Status</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <div className="ml-auto flex gap-2">
+          <button onClick={load} className="px-4 py-2.5 text-xs font-black bg-white/5 border border-white/10 text-mist rounded-xl hover:bg-white/10 transition-all">↻ Refresh</button>
+          <Button onClick={() => { setEditVehicle({ title: '', vehicle_type: 'car', listing_subtype: 'rental', price_per_day: 0, with_driver: false, capacity: 4, description: '', features: [], status: 'active', fuel: 'Petrol' }); setEditModal(true); }} className="bg-primary hover:bg-gold-light text-white font-black h-10 px-6 rounded-xl">
+            ➕ Add Vehicle
+          </Button>
+        </div>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex items-center justify-center h-40"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/10">
+          <div className="text-5xl mb-4">🚗</div>
+          <p className="text-pearl font-black text-xl">No vehicle listings yet</p>
+          <p className="text-mist text-sm mt-2">Click "Add Vehicle" to create the first listing — it will appear on the VehiclesPage.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white/5 rounded-3xl border border-white/10">
           <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Vehicle</th>
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Category</th>
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Capacity</th>
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Daily Rate</th>
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Features</th>
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black text-mist uppercase tracking-widest">Actions</th>
-              </tr>
-            </thead>
+            <thead><tr className="border-b border-white/5">
+              {['Vehicle', 'Type', 'Subtype', 'Price/Day', 'Driver', 'Status', 'Moderation', 'Actions'].map(h => (
+                <th key={h} className="px-4 py-4 text-[10px] font-black text-mist uppercase tracking-widest">{h}</th>
+              ))}
+            </tr></thead>
             <tbody className="divide-y divide-white/5">
-              {filteredVehicles.map((vehicle) => (
-                <tr key={vehicle.id} className="hover:bg-white/5 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-pearl group-hover:text-primary transition-colors">{vehicle.title}</div>
-                    <div className="text-[10px] text-mist mt-1">{vehicle.description}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-black text-primary bg-primary/10 px-3 py-1 rounded-lg">{vehicle.category}</span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-amber-500">{vehicle.capacity} seats</td>
-                  <td className="px-6 py-4">
-                    <div className="font-black text-pearl">Rs. {vehicle.pricePerDay.toLocaleString()}</div>
-                    <div className="text-[10px] text-mist">/day</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {vehicle.features.slice(0, 2).map((f: string) => (
-                        <span key={f} className="text-[9px] bg-white/10 text-mist px-2 py-1 rounded-full">{f}</span>
-                      ))}
-                      {vehicle.features.length > 2 && (
-                        <span className="text-[9px] bg-white/10 text-mist px-2 py-1 rounded-full">+{vehicle.features.length - 2}</span>
-                      )}
+              {filtered.map(v => (
+                <tr key={v.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="px-4 py-3"><div className="font-bold text-pearl">{v.title || '(untitled)'}</div><div className="text-[10px] text-mist">{v.description?.slice(0, 40) || ''}</div></td>
+                  <td className="px-4 py-3"><span className="text-xs text-mist font-bold">{v.vehicle_type || '—'}</span></td>
+                  <td className="px-4 py-3"><span className="text-xs font-black text-primary bg-primary/10 px-2 py-1 rounded-lg">{v.listing_subtype || 'rental'}</span></td>
+                  <td className="px-4 py-3 font-bold text-pearl">Rs. {(v.price_per_day || 0).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-mist">{v.with_driver ? '✅' : '—'}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-[10px] font-black ${v.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-mist/10 text-mist'}`}>{v.status || 'active'}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button onClick={() => handleModerate(v.id, 'approved')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition-all ${v.moderation_status === 'approved' ? 'bg-emerald-500/30 text-emerald-400' : 'bg-white/5 text-mist hover:bg-emerald-500/20 hover:text-emerald-400'}`}>✓</button>
+                      <button onClick={() => handleModerate(v.id, 'rejected')} className={`px-2 py-1 rounded-lg text-[9px] font-black transition-all ${v.moderation_status === 'rejected' ? 'bg-ruby/30 text-ruby' : 'bg-white/5 text-mist hover:bg-ruby/20 hover:text-ruby'}`}>✕</button>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                      vehicle.status === 'active' ? 'bg-emerald-500/20 text-emerald-500' :
-                      vehicle.status === 'maintenance' ? 'bg-amber-500/20 text-amber-500' :
-                      'bg-mist/10 text-mist'
-                    }`}>
-                      {vehicle.status}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => {
-                          setEditingVehicle(vehicle);
-                          setEditingModal(true);
-                        }}
-                        className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black hover:bg-primary hover:text-white transition-all"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteVehicle(vehicle.id)}
-                        className="px-3 py-1 bg-ruby/10 text-ruby rounded-lg text-[10px] font-black hover:bg-ruby hover:text-white transition-all"
-                      >
-                        Delete
-                      </button>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setEditVehicle({ ...v }); setEditModal(true); }} className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black hover:bg-primary hover:text-white transition-all">Edit</button>
+                      <button onClick={() => handleDelete(v.id)} className="px-3 py-1 bg-ruby/10 text-ruby rounded-lg text-[10px] font-black hover:bg-ruby hover:text-white transition-all">Del</button>
                     </div>
                   </td>
                 </tr>
@@ -2004,274 +2209,478 @@ function AdvancedVehicleManager() {
             </tbody>
           </table>
         </div>
-      </div>
+      )}
 
-      {/* Category Rates Management */}
-      <div className="bg-white/5 rounded-3xl border border-white/10 p-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-black text-white uppercase tracking-widest flex items-center gap-3">
-            <span className="w-2 h-6 bg-amber-500 rounded-full"></span> Category Rates & Pricing
-          </h2>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setBulkEditMode(!bulkEditMode)}
-              className={`font-black h-10 px-6 rounded-xl transition-all ${
-                bulkEditMode ? 'bg-amber-500 text-white' : 'bg-white/10 text-mist hover:bg-white/20'
-              }`}
-            >
-              {bulkEditMode ? '✓ Bulk Edit' : '⚙️ Bulk Update'}
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingRate(null);
-                setRatesModal(true);
-              }}
-              className="bg-primary hover:bg-gold-light text-white font-black h-10 px-6 rounded-xl"
-            >
-              ➕ New Rate
-            </Button>
-          </div>
-        </div>
-
-        {bulkEditMode && (
-          <div className="mb-6 p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-            <p className="text-sm font-bold text-amber-500 mb-4">Apply percentage multiplier to all rates:</p>
-            <div className="flex flex-wrap gap-2">
-              {[0.8, 0.9, 1.0, 1.1, 1.2, 1.5].map((mult) => (
-                <button
-                  key={mult}
-                  onClick={() => handleBulkApply(mult)}
-                  className={`px-4 py-2 rounded-lg font-black text-sm transition-all ${
-                    mult === 1.0 ? 'bg-amber-500 text-white' : 'bg-white/10 text-mist hover:bg-white/20'
-                  }`}
-                >
-                  {mult === 1.0 ? 'Reset' : `${((mult - 1) * 100 > 0 ? '+' : '')}${Math.round((mult - 1) * 100)}%`}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Rates Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categoryRates.map((rate) => (
-            <div key={rate.category} className="bg-zinc-900 border border-white/5 rounded-2xl p-6 hover:border-white/20 transition-all group cursor-pointer">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="font-black text-pearl text-lg">{rate.category}</h3>
-                  <p className="text-[10px] text-mist mt-1 font-bold">Category rates & commission</p>
-                </div>
-                <span className="px-3 py-1 bg-primary/20 text-primary rounded-lg text-[10px] font-black">{rate.commission}% COM</span>
-              </div>
-
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-mist text-sm font-bold">Base Fare:</span>
-                  <span className="font-black text-pearl">Rs. {rate.baseFare}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-mist text-sm font-bold">Per km:</span>
-                  <span className="font-black text-pearl">Rs. {rate.perKm}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-mist text-sm font-bold">Per minute:</span>
-                  <span className="font-black text-pearl">Rs. {rate.perMin}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setEditingRate(rate);
-                  setRatesModal(true);
-                }}
-                className="w-full p-2 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase hover:bg-primary hover:text-white transition-all"
-              >
-                Edit Rates
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Vehicle Edit Modal */}
-      <Dialog open={editingModal} onOpenChange={setEditingModal}>
+      {/* Edit / Add Modal */}
+      <Dialog open={editModal} onOpenChange={setEditModal}>
         <DialogContent className="sm:max-w-2xl bg-zinc-950 border-white/10 text-white rounded-[2.5rem] p-8">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-widest">{editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-widest">{editVehicle?.id ? 'Edit Vehicle' : 'Add Vehicle Listing'}</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-5">
-            <div>
-              <label className="text-[10px] font-black text-mist uppercase tracking-widest">Vehicle Title *</label>
-              <input
-                type="text"
-                defaultValue={editingVehicle?.title || ''}
-                onChange={(e) => setEditingVehicle({...editingVehicle, title: e.target.value})}
-                className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                placeholder="e.g., Eco-Friendly Toyota Prius"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          {editVehicle && (
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
               <div>
-                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Category *</label>
-                <select
-                  value={editingVehicle?.category || ''}
-                  onChange={(e) => setEditingVehicle({...editingVehicle, category: e.target.value})}
-                  className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                >
-                  <option>Select category...</option>
-                  {Array.from(new Set(categoryRates.map(r => r.category))).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Title *</label>
+                <input value={editVehicle.title || ''} onChange={e => setEditVehicle({ ...editVehicle, title: e.target.value })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/40" placeholder="e.g., Toyota Prius 2023" />
               </div>
-              <div>
-                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Capacity (seats) *</label>
-                <input
-                  type="number"
-                  defaultValue={editingVehicle?.capacity || ''}
-                  onChange={(e) => setEditingVehicle({...editingVehicle, capacity: parseInt(e.target.value)})}
-                  className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-mist uppercase tracking-widest">Description</label>
-              <textarea
-                defaultValue={editingVehicle?.description || ''}
-                onChange={(e) => setEditingVehicle({...editingVehicle, description: e.target.value})}
-                className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-1 focus:ring-primary/40 focus:outline-none h-20 resize-none"
-                placeholder="Vehicle description..."
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-mist uppercase tracking-widest">Daily Rate (LKR) *</label>
-              <input
-                type="number"
-                defaultValue={editingVehicle?.pricePerDay || ''}
-                onChange={(e) => setEditingVehicle({...editingVehicle, pricePerDay: parseInt(e.target.value)})}
-                className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-mist uppercase tracking-widest">Features (comma separated)</label>
-              <input
-                type="text"
-                defaultValue={editingVehicle?.features?.join(', ') || ''}
-                onChange={(e) => setEditingVehicle({...editingVehicle, features: e.target.value.split(',').map(f => f.trim())})}
-                className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                placeholder="e.g., AC, ABS, Power steering"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-mist uppercase tracking-widest">Status</label>
-              <select
-                value={editingVehicle?.status || 'active'}
-                onChange={(e) => setEditingVehicle({ ...editingVehicle, status: e.target.value as FleetVehicle['status'] })}
-                className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-              >
-                <option value="active">Active</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button onClick={() => setEditingModal(false)} variant="outline" className="flex-1">Cancel</Button>
-              <Button
-                onClick={() => handleSaveVehicle(editingVehicle)}
-                className="flex-1 bg-primary hover:bg-gold-light text-white font-black"
-              >
-                Save Vehicle
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Rates Edit Modal */}
-      <Dialog open={ratesModal} onOpenChange={setRatesModal}>
-        <DialogContent className="sm:max-w-xl bg-zinc-950 border-white/10 text-white rounded-[2.5rem] p-8">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-widest">{editingRate ? `Edit ${editingRate.category} Rates` : 'Add New Rate'}</DialogTitle>
-          </DialogHeader>
-
-          {editingRate && (
-            <div className="space-y-5">
-              <div>
-                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Category</label>
-                <div className="mt-2 p-4 bg-zinc-900 rounded-xl font-black text-pearl text-lg">{editingRate.category}</div>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Base Fare (LKR)</label>
-                  <input
-                    type="number"
-                    value={editingRate.baseFare}
-                    onChange={(e) => setEditingRate({...editingRate, baseFare: parseFloat(e.target.value)})}
-                    className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                  />
+                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Vehicle Type</label>
+                  <select value={editVehicle.vehicle_type || 'car'} onChange={e => setEditVehicle({ ...editVehicle, vehicle_type: e.target.value })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none">
+                    {['car', 'van', 'suv', 'bus', 'coach', 'tuk', 'moto'].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Per KM (LKR)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={editingRate.perKm}
-                    onChange={(e) => setEditingRate({...editingRate, perKm: parseFloat(e.target.value)})}
-                    className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                  />
+                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Listing Subtype</label>
+                  <select value={editVehicle.listing_subtype || 'rental'} onChange={e => setEditVehicle({ ...editVehicle, listing_subtype: e.target.value })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none">
+                    <option value="rental">Rental</option>
+                    <option value="coach">Coach / Luxury</option>
+                    <option value="airport_transfer">Airport Transfer</option>
+                  </select>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Per Minute (LKR)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={editingRate.perMin}
-                    onChange={(e) => setEditingRate({...editingRate, perMin: parseFloat(e.target.value)})}
-                    className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                  />
+                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Price/Day (LKR)</label>
+                  <input type="number" value={editVehicle.price_per_day || 0} onChange={e => setEditVehicle({ ...editVehicle, price_per_day: +e.target.value })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Commission (%)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={editingRate.commission}
-                    onChange={(e) => setEditingRate({...editingRate, commission: parseFloat(e.target.value)})}
-                    className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                  />
+                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Capacity</label>
+                  <input type="number" value={editVehicle.capacity || 4} onChange={e => setEditVehicle({ ...editVehicle, capacity: +e.target.value })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-mist uppercase tracking-widest">Fuel</label>
+                  <select value={editVehicle.fuel || 'Petrol'} onChange={e => setEditVehicle({ ...editVehicle, fuel: e.target.value })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none">
+                    {['Petrol', 'Diesel', 'Electric', 'Hybrid'].map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
                 </div>
               </div>
-
-              <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4">
-                <p className="text-xs font-black text-primary uppercase tracking-widest">Estimated Fare Example:</p>
-                <p className="text-2xl font-black text-pearl mt-2">Rs. {Math.round(editingRate.baseFare + (10 * editingRate.perKm) + (15 * editingRate.perMin))}</p>
-                <p className="text-[10px] text-mist mt-1">For 10km ride, 15 min wait</p>
+              <div className="flex items-center gap-3">
+                <Switch checked={editVehicle.with_driver ?? false} onCheckedChange={v => setEditVehicle({ ...editVehicle, with_driver: v })} />
+                <label className="text-sm font-bold text-mist">Includes Driver</label>
               </div>
-
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Description</label>
+                <textarea value={editVehicle.description || ''} onChange={e => setEditVehicle({ ...editVehicle, description: e.target.value })} rows={3} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none resize-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-mist uppercase tracking-widest">Features (comma separated)</label>
+                <input value={Array.isArray(editVehicle.features) ? editVehicle.features.join(', ') : ''} onChange={e => setEditVehicle({ ...editVehicle, features: e.target.value.split(',').map((f: string) => f.trim()).filter(Boolean) })} className="w-full mt-2 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none" placeholder="AC, WiFi, USB, GPS…" />
+              </div>
               <div className="flex gap-4 pt-4">
-                <Button onClick={() => setRatesModal(false)} variant="outline" className="flex-1">Cancel</Button>
-                <Button
-                  onClick={handleSaveRate}
-                  className="flex-1 bg-primary hover:bg-gold-light text-white font-black"
-                >
-                  Save Rates
-                </Button>
+                <Button onClick={() => { setEditModal(false); setEditVehicle(null); }} variant="outline" className="flex-1">Cancel</Button>
+                <Button onClick={handleSave} disabled={saving} className="flex-1 bg-primary hover:bg-gold-light text-white font-black">{saving ? 'Saving…' : 'Save Vehicle'}</Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OFFICE TRANSPORT ADMIN PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+function OfficeTransportAdminPanel() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<any[]>([]);
+  const [subs, setSubs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'plans' | 'routes' | 'subs'>('plans');
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const [pRes, rRes, sRes] = await Promise.all([
+        db.from('office_transport_plans').select('*').order('created_at', { ascending: false }),
+        db.from('office_transport_routes').select('*').order('created_at', { ascending: false }),
+        db.from('office_transport_subscriptions').select('*, office_transport_plans(name), office_transport_routes(name)').order('created_at', { ascending: false }).limit(50),
+      ]);
+      setPlans(pRes.data ?? []);
+      setRoutes(rRes.data ?? []);
+      setSubs(sRes.data ?? []);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const toggleActive = async (table: string, id: string, current: boolean, setter: (fn: (prev: any[]) => any[]) => void) => {
+    await db.from(table).update({ active: !current }).eq('id', id);
+    setter(prev => prev.map(r => r.id === id ? { ...r, active: !current } : r));
+    showToast(!current ? '✅ Activated' : '⏸️ Deactivated');
+  };
+
+  return (
+    <div className="space-y-6">
+      {toast && <div className="fixed top-6 right-6 z-50 bg-zinc-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold border border-white/10">{toast}</div>}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-black text-white">🚌 Office Transport Admin</h2>
+        <div className="flex gap-2">
+          {(['plans', 'routes', 'subs'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${tab === t ? 'bg-primary text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>
+              {t === 'plans' ? '📋 Plans' : t === 'routes' ? '🗺️ Routes' : '👥 Subscriptions'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-20 text-white/30 font-black uppercase tracking-widest">Loading…</div>
+      ) : tab === 'plans' ? (
+        <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-white/10">
+              <tr className="text-left">
+                {['Name', 'Price / Mo', 'Trips / Mo', 'Status', 'Action'].map(h => (
+                  <th key={h} className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {plans.length === 0 && <tr><td colSpan={5} className="text-center py-16 text-white/20 font-black uppercase tracking-widest">No plans yet</td></tr>}
+              {plans.map(p => (
+                <tr key={p.id} className="hover:bg-white/5 transition-all">
+                  <td className="px-6 py-4 text-white font-bold">{p.name}</td>
+                  <td className="px-6 py-4 text-emerald-400 font-black">Rs. {(p.price_per_month || 0).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-white/70">{p.trips_per_month ?? '∞'}</td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${p.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
+                      {p.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <button onClick={() => toggleActive('office_transport_plans', p.id, p.active, setPlans)}
+                      className="text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-all">
+                      {p.active ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : tab === 'routes' ? (
+        <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-white/10">
+              <tr className="text-left">
+                {['Name', 'From', 'To', 'Departure', 'Status', 'Action'].map(h => (
+                  <th key={h} className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {routes.length === 0 && <tr><td colSpan={6} className="text-center py-16 text-white/20 font-black uppercase tracking-widest">No routes yet</td></tr>}
+              {routes.map(r => (
+                <tr key={r.id} className="hover:bg-white/5 transition-all">
+                  <td className="px-6 py-4 text-white font-bold">{r.name}</td>
+                  <td className="px-6 py-4 text-white/70">{r.origin}</td>
+                  <td className="px-6 py-4 text-white/70">{r.destination}</td>
+                  <td className="px-6 py-4 text-white/70">{r.departure_time}</td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${r.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
+                      {r.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <button onClick={() => toggleActive('office_transport_routes', r.id, r.active, setRoutes)}
+                      className="text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-all">
+                      {r.active ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-white/10">
+              <tr className="text-left">
+                {['User ID', 'Plan', 'Route', 'Since', 'Status'].map(h => (
+                  <th key={h} className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {subs.length === 0 && <tr><td colSpan={5} className="text-center py-16 text-white/20 font-black uppercase tracking-widest">No subscriptions yet</td></tr>}
+              {subs.map(s => (
+                <tr key={s.id} className="hover:bg-white/5 transition-all">
+                  <td className="px-6 py-4 text-white/60 font-mono text-xs">{s.user_id?.slice(0, 8)}…</td>
+                  <td className="px-6 py-4 text-white font-bold">{s.office_transport_plans?.name ?? '—'}</td>
+                  <td className="px-6 py-4 text-white/70">{s.office_transport_routes?.name ?? '—'}</td>
+                  <td className="px-6 py-4 text-white/50 text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${s.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
+                      {s.active ? 'Active' : 'Expired'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AIRPORT ADMIN PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+function AirportAdminPanel() {
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const { data } = await db.from('airport_transfers')
+        .select('*, vehicles_listings(title)')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      setBookings(data ?? []);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const updateStatus = async (id: string, status: string) => {
+    await db.from('airport_transfers').update({ status }).eq('id', id);
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
+    showToast(`✅ Status → ${status}`);
+  };
+
+  const filtered = statusFilter === 'all' ? bookings : bookings.filter(b => b.status === statusFilter);
+
+  return (
+    <div className="space-y-6">
+      {toast && <div className="fixed top-6 right-6 z-50 bg-zinc-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold border border-white/10">{toast}</div>}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-2xl font-black text-white">✈️ Airport Transfer Admin</h2>
+        <div className="flex gap-2 flex-wrap">
+          {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${statusFilter === s ? 'bg-primary text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-20 text-white/30 font-black uppercase tracking-widest">Loading…</div>
+      ) : (
+        <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-white/10">
+              <tr className="text-left">
+                {['Passenger', 'Flight', 'Airport', 'Direction', 'Pickup Time', 'Vehicle', 'Fare', 'Status', 'Actions'].map(h => (
+                  <th key={h} className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-16 text-white/20 font-black uppercase tracking-widest">No bookings yet</td></tr>}
+              {filtered.map(b => (
+                <tr key={b.id} className="hover:bg-white/5 transition-all">
+                  <td className="px-5 py-4">
+                    <p className="text-white font-bold text-sm">{b.passenger_name ?? '—'}</p>
+                    <p className="text-white/40 text-xs">{b.id.slice(0, 8)}</p>
+                  </td>
+                  <td className="px-5 py-4 text-white/70 font-mono text-xs">{b.flight_number ?? '—'}</td>
+                  <td className="px-5 py-4 text-white/70 text-xs">{b.airport_code}</td>
+                  <td className="px-5 py-4">
+                    <span className={`text-[10px] font-black px-2 py-1 rounded-full ${b.direction === 'to_airport' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                      {b.direction === 'to_airport' ? '→✈️ To' : '✈️→ From'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-white/60 text-xs whitespace-nowrap">{b.pickup_datetime ? new Date(b.pickup_datetime).toLocaleString() : '—'}</td>
+                  <td className="px-5 py-4 text-white/70 text-xs">{b.vehicles_listings?.title ?? '—'}</td>
+                  <td className="px-5 py-4 text-emerald-400 font-black text-sm">Rs. {(b.fare || 0).toLocaleString()}</td>
+                  <td className="px-5 py-4">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full whitespace-nowrap ${
+                      b.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400' :
+                      b.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                      b.status === 'completed' ? 'bg-blue-500/20 text-blue-300' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>{b.status}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex gap-1">
+                      {b.status === 'pending' && <button onClick={() => updateStatus(b.id, 'confirmed')} className="text-[9px] font-black uppercase bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-2.5 py-1.5 rounded-lg">Confirm</button>}
+                      {b.status === 'confirmed' && <button onClick={() => updateStatus(b.id, 'completed')} className="text-[9px] font-black uppercase bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-2.5 py-1.5 rounded-lg">Complete</button>}
+                      {b.status !== 'cancelled' && b.status !== 'completed' && <button onClick={() => updateStatus(b.id, 'cancelled')} className="text-[9px] font-black uppercase bg-red-500/20 hover:bg-red-500/30 text-red-400 px-2.5 py-1.5 rounded-lg">Cancel</button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARCELS ADMIN PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+function ParcelsAdminPanel() {
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [itemTypes, setItemTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+  const [adminTab, setAdminTab] = useState<'deliveries' | 'item_types'>('deliveries');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const [dRes, tRes] = await Promise.all([
+        db.from('parcel_deliveries').select('*, parcel_item_types(name)').order('created_at', { ascending: false }).limit(100),
+        db.from('parcel_item_types').select('*').order('created_at', { ascending: false }),
+      ]);
+      setDeliveries(dRes.data ?? []);
+      setItemTypes(tRes.data ?? []);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const updateStatus = async (id: string, status: string) => {
+    await db.from('parcel_deliveries').update({ status }).eq('id', id);
+    setDeliveries(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    showToast(`✅ Status → ${status}`);
+  };
+
+  const filtered = statusFilter === 'all' ? deliveries : deliveries.filter(d => d.status === statusFilter);
+
+  const STATUS_COLORS: Record<string, string> = {
+    pending: 'bg-yellow-500/20 text-yellow-400',
+    confirmed: 'bg-emerald-500/20 text-emerald-400',
+    picked_up: 'bg-blue-500/20 text-blue-400',
+    in_transit: 'bg-orange-500/20 text-orange-400',
+    delivered: 'bg-green-500/20 text-green-300',
+    cancelled: 'bg-red-500/20 text-red-400',
+  };
+
+  return (
+    <div className="space-y-6">
+      {toast && <div className="fixed top-6 right-6 z-50 bg-zinc-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold border border-white/10">{toast}</div>}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-2xl font-black text-white">📦 Parcels Admin</h2>
+        <div className="flex gap-2">
+          {(['deliveries', 'item_types'] as const).map(t => (
+            <button key={t} onClick={() => setAdminTab(t)}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${adminTab === t ? 'bg-primary text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>
+              {t === 'deliveries' ? '📦 Deliveries' : '🏷️ Item Types'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {adminTab === 'deliveries' && (
+        <>
+          <div className="flex gap-2 flex-wrap">
+            {['all', 'pending', 'confirmed', 'picked_up', 'in_transit', 'delivered', 'cancelled'].map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${statusFilter === s ? 'bg-primary text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+          {loading ? (
+            <div className="text-center py-20 text-white/30 font-black uppercase tracking-widest">Loading…</div>
+          ) : (
+            <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="border-b border-white/10">
+                  <tr className="text-left">
+                    {['ID', 'Sender', 'Recipient', 'Item Type', 'Pickup', 'Drop', 'Fare', 'Status', 'Actions'].map(h => (
+                      <th key={h} className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-16 text-white/20 font-black uppercase tracking-widest">No parcels yet</td></tr>}
+                  {filtered.map(d => (
+                    <tr key={d.id} className="hover:bg-white/5 transition-all">
+                      <td className="px-5 py-4 text-white/40 font-mono text-xs">{d.id.slice(0, 8)}</td>
+                      <td className="px-5 py-4">
+                        <p className="text-white text-xs font-bold">{d.sender_name || '—'}</p>
+                        <p className="text-white/40 text-[10px]">{d.sender_phone}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="text-white text-xs font-bold">{d.recipient_name || '—'}</p>
+                        <p className="text-white/40 text-[10px]">{d.recipient_phone}</p>
+                      </td>
+                      <td className="px-5 py-4 text-white/70 text-xs">{d.parcel_item_types?.name ?? '—'}</td>
+                      <td className="px-5 py-4 text-white/60 text-xs max-w-[120px] truncate">{d.pickup_address}</td>
+                      <td className="px-5 py-4 text-white/60 text-xs max-w-[120px] truncate">{d.dropoff_address}</td>
+                      <td className="px-5 py-4 text-emerald-400 font-black text-sm">Rs. {(d.fare || 0).toLocaleString()}</td>
+                      <td className="px-5 py-4">
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full whitespace-nowrap ${STATUS_COLORS[d.status] ?? 'bg-white/10 text-white/40'}`}>{d.status}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-1">
+                          {d.status === 'pending' && <button onClick={() => updateStatus(d.id, 'confirmed')} className="text-[9px] font-black uppercase bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-2.5 py-1.5 rounded-lg whitespace-nowrap">Confirm</button>}
+                          {d.status === 'confirmed' && <button onClick={() => updateStatus(d.id, 'picked_up')} className="text-[9px] font-black uppercase bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-2.5 py-1.5 rounded-lg whitespace-nowrap">Picked Up</button>}
+                          {d.status === 'picked_up' && <button onClick={() => updateStatus(d.id, 'in_transit')} className="text-[9px] font-black uppercase bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 px-2.5 py-1.5 rounded-lg whitespace-nowrap">In Transit</button>}
+                          {d.status === 'in_transit' && <button onClick={() => updateStatus(d.id, 'delivered')} className="text-[9px] font-black uppercase bg-green-500/20 hover:bg-green-500/30 text-green-400 px-2.5 py-1.5 rounded-lg whitespace-nowrap">Delivered</button>}
+                          {!['delivered', 'cancelled'].includes(d.status) && <button onClick={() => updateStatus(d.id, 'cancelled')} className="text-[9px] font-black uppercase bg-red-500/20 hover:bg-red-500/30 text-red-400 px-2.5 py-1.5 rounded-lg whitespace-nowrap">Cancel</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {adminTab === 'item_types' && (
+        <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-white/10">
+              <tr className="text-left">
+                {['Icon', 'Name', 'Base Price', 'Max Weight (kg)', 'Status'].map(h => (
+                  <th key={h} className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {itemTypes.length === 0 && <tr><td colSpan={5} className="text-center py-16 text-white/20 font-black uppercase tracking-widest">No item types yet — add via SQL/migration</td></tr>}
+              {itemTypes.map(t => (
+                <tr key={t.id} className="hover:bg-white/5 transition-all">
+                  <td className="px-6 py-4 text-2xl">{t.icon ?? '📦'}</td>
+                  <td className="px-6 py-4 text-white font-bold">{t.name}</td>
+                  <td className="px-6 py-4 text-emerald-400 font-black">Rs. {(t.base_price || 0).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-white/70">{t.max_weight_kg ?? '—'}</td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${t.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
+                      {t.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -3201,15 +3610,21 @@ interface SitePage {
 function PagesPanel() {
   const [pages, setPages] = useState<SitePage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SitePage | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [draft, setDraft] = useState<Partial<SitePage>>({});
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
     db.from('site_pages').select('*').order('slug')
       .then(({ data, error }) => {
-        if (!error && data) setPages(data as SitePage[]);
+        if (error) {
+          setLoadError(`Failed to load pages: ${error.message}. Make sure migration 0006 has been applied in Supabase.`);
+        } else if (data) {
+          setPages(data as SitePage[]);
+        }
         setLoading(false);
       });
   }, []);
@@ -3252,7 +3667,23 @@ function PagesPanel() {
     if (!error && data) {
       setPages(prev => [...prev, data as SitePage]);
       openPage(data as SitePage);
+    } else if (error) {
+      setMsg({ type: 'err', text: error.message });
     }
+  };
+
+  const handleDelete = async (p: SitePage) => {
+    if (!confirm(`Delete page "/${p.slug}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    const { error } = await db.from('site_pages').delete().eq('id', p.id);
+    if (!error) {
+      setPages(prev => prev.filter(pg => pg.id !== p.id));
+      if (selected?.id === p.id) { setSelected(null); setDraft({}); }
+      setMsg({ type: 'ok', text: `Page "/${p.slug}" deleted.` });
+    } else {
+      setMsg({ type: 'err', text: error.message });
+    }
+    setDeleting(false);
   };
 
   const SLUG_LABELS: Record<string, string> = {
@@ -3267,14 +3698,22 @@ function PagesPanel() {
           <h2 className="text-sm font-black text-pearl uppercase tracking-widest">📝 Site Pages</h2>
           <button onClick={handleCreate} className="text-[10px] font-black uppercase tracking-wider bg-primary/20 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/30 transition-all">+ New Page</button>
         </div>
+        {loadError && (
+          <div className="p-3 bg-ruby/10 border border-ruby/20 rounded-xl text-[11px] text-ruby font-bold">{loadError}</div>
+        )}
         {loading ? (
           <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-12 bg-white/5 rounded-xl animate-pulse" />)}</div>
+        ) : pages.length === 0 && !loadError ? (
+          <div className="py-10 text-center text-mist/40 text-xs font-bold">No pages yet. Click + New Page to create one.</div>
         ) : pages.map(p => (
-          <button key={p.id} onClick={() => openPage(p)}
-            className={`w-full text-left px-4 py-3 rounded-xl transition-all border ${selected?.id === p.id ? 'bg-primary/20 border-primary/30 text-pearl' : 'bg-white/3 border-transparent text-mist hover:bg-white/8'}`}>
-            <div className="text-xs font-black">{SLUG_LABELS[p.slug] || p.title}</div>
-            <div className="text-[10px] text-mist/60 mt-0.5">/{p.slug} · {p.is_published ? '✅ Live' : '🔴 Draft'}</div>
-          </button>
+          <div key={p.id} className={`flex items-center gap-1 rounded-xl transition-all border ${selected?.id === p.id ? 'bg-primary/20 border-primary/30' : 'bg-white/3 border-transparent hover:bg-white/8'}`}>
+            <button onClick={() => openPage(p)} className="flex-1 text-left px-3 py-3">
+              <div className="text-xs font-black text-pearl">{SLUG_LABELS[p.slug] || p.title}</div>
+              <div className="text-[10px] text-mist/60 mt-0.5">/{p.slug} · {p.is_published ? '✅ Live' : '🔴 Draft'}</div>
+            </button>
+            <button onClick={() => handleDelete(p)} disabled={deleting}
+              className="px-2 py-1 mr-2 text-ruby/50 hover:text-ruby transition-colors text-[10px]" title="Delete page">✕</button>
+          </div>
         ))}
       </div>
 
@@ -3284,6 +3723,7 @@ function PagesPanel() {
           <div className="flex flex-col items-center justify-center h-full text-mist/50 py-20">
             <div className="text-4xl mb-3">📝</div>
             <p className="text-sm font-bold">Select a page to edit</p>
+            {msg && <div className={`mt-4 px-4 py-2.5 rounded-lg text-xs font-bold ${msg.type === 'ok' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-ruby/10 text-ruby'}`}>{msg.text}</div>}
           </div>
         ) : (
           <div className="space-y-5">

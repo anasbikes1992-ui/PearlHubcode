@@ -40,6 +40,7 @@ export interface StayFilters {
 export interface VehicleFilters {
   location?: string;
   vehicle_type?: string;
+  listing_subtype?: string;
   maxPrice?: number;
   with_driver?: boolean;
 }
@@ -94,6 +95,7 @@ export function useVehicles(filters?: VehicleFilters) {
 
       if (filters?.location)     query = query.ilike("location", `%${filters.location}%`);
       if (filters?.vehicle_type && filters.vehicle_type !== "all") query = query.eq("vehicle_type", filters.vehicle_type);
+      if (filters?.listing_subtype && filters.listing_subtype !== "all") query = query.eq("listing_subtype", filters.listing_subtype);
       if (filters?.maxPrice)     query = query.lte("price_per_day", filters.maxPrice);
       if (filters?.with_driver !== undefined) query = query.eq("with_driver", filters.with_driver);
 
@@ -258,7 +260,7 @@ export function useInvalidateListings() {
   };
 }
 
-// â”€â”€ Taxi: Vehicle Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Taxi: Vehicle Categories (ride-hailing only) ─────────────────────────────
 export function useTaxiCategories() {
   return useQuery({
     queryKey: ["taxi-categories"],
@@ -267,11 +269,119 @@ export function useTaxiCategories() {
         .from("taxi_vehicle_categories")
         .select("*")
         .eq("is_active", true)
+        .eq("service_type", "taxi")
         .order("base_fare", { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ── Taxi: All categories (admin use, all service types) ───────────────────────
+export function useAllTaxiCategories() {
+  return useQuery({
+    queryKey: ["taxi-categories-all"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("taxi_vehicle_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("service_type", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ── Office Transport: active plans ────────────────────────────────────────────
+export function useOfficeTransportPlans() {
+  return useQuery({
+    queryKey: ["office-plans"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("office_transport_plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("price", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ── Office Transport: active routes ──────────────────────────────────────────
+export function useOfficeTransportRoutes() {
+  return useQuery({
+    queryKey: ["office-routes"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("office_transport_routes")
+        .select("*")
+        .eq("status", "active")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ── Office Transport: user subscription ───────────────────────────────────────
+export function useUserOfficeSubscription(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["office-sub", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await db
+        .from("office_transport_subscriptions")
+        .select("*, plan:office_transport_plans(*), route:office_transport_routes(*)")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+}
+
+// ── Office Transport: user wallet ─────────────────────────────────────────────
+export function useUserOfficeWallet(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["office-wallet", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await db
+        .from("office_transport_wallets")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+}
+
+// ── Parcel Item Types ─────────────────────────────────────────────────────────
+export function useParcelItemTypes() {
+  return useQuery({
+    queryKey: ["parcel-item-types"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("parcel_item_types")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 10 * 60 * 1000,
   });
 }
 
