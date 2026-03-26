@@ -24,6 +24,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   final _priceCtrl = TextEditingController();
   bool _isSubmitting = false;
   List<File> _selectedImages = [];
+  String _listingSubtype = 'standard'; // vehicle providers only
 
   @override
   void dispose() {
@@ -154,6 +155,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         'title': _titleCtrl.text.trim(),
         'price_per_day': double.parse(_priceCtrl.text),
         'vehicle_type': 'car',
+        'listing_subtype': _listingSubtype,
         'make': '',
         'model': '',
         'year': DateTime.now().year,
@@ -312,6 +314,24 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 14),
+
+              if (role == UserRole.vehicleProvider) ...[  
+                DropdownButtonFormField<String>(
+                  value: _listingSubtype,
+                  decoration: InputDecoration(
+                    labelText: 'Vehicle Use Type',
+                    prefixIcon: const Icon(Icons.category_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'standard', child: Text('🚗 Standard Rental')),
+                    DropdownMenuItem(value: 'airport_transfer', child: Text('✈️ Airport Transfer')),
+                    DropdownMenuItem(value: 'coach', child: Text('🚌 Office / Coach Transport')),
+                  ],
+                  onChanged: (v) => setState(() => _listingSubtype = v ?? 'standard'),
+                ),
+                const SizedBox(height: 14),
+              ],
 
               TextFormField(
                 controller: _priceCtrl,

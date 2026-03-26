@@ -13,6 +13,9 @@ import 'screens/moderation/listings_moderation_screen.dart';
 import 'screens/users/users_screen.dart';
 import 'screens/users/kyc_review_screen.dart';
 import 'screens/taxi/taxi_admin_screen.dart';
+import 'screens/transport/airport_admin_screen.dart';
+import 'screens/transport/office_transport_admin_screen.dart';
+import 'screens/transport/parcels_admin_screen.dart';
 import 'screens/finance/transactions_screen.dart';
 import 'screens/settings/platform_settings_screen.dart';
 
@@ -72,6 +75,9 @@ class PearlHubAdminApp extends ConsumerWidget {
             GoRoute(path: '/users', builder: (_, __) => const UsersScreen()),
             GoRoute(path: '/users/kyc', builder: (_, __) => const KYCReviewScreen()),
             GoRoute(path: '/taxi-admin', builder: (_, __) => const TaxiAdminScreen()),
+            GoRoute(path: '/airport-admin', builder: (_, __) => const AirportAdminScreen()),
+            GoRoute(path: '/office-transport-admin', builder: (_, __) => const OfficeTransportAdminScreen()),
+            GoRoute(path: '/parcels-admin', builder: (_, __) => const ParcelsAdminScreen()),
             GoRoute(path: '/transactions', builder: (_, __) => const TransactionsScreen()),
             GoRoute(path: '/settings', builder: (_, __) => const PlatformSettingsScreen()),
           ],
@@ -127,6 +133,9 @@ class AdminShell extends ConsumerWidget {
           _NavItem(icon: Icons.people_outlined, label: 'Users', path: '/users'),
           _NavItem(icon: Icons.verified_user_outlined, label: 'KYC Reviews', path: '/users/kyc'),
           _NavItem(icon: Icons.local_taxi_outlined, label: 'Taxi Admin', path: '/taxi-admin'),
+          _NavItem(icon: Icons.flight_outlined, label: 'Airport Transfers', path: '/airport-admin'),
+          _NavItem(icon: Icons.directions_bus_outlined, label: 'Office Transport', path: '/office-transport-admin'),
+          _NavItem(icon: Icons.local_shipping_outlined, label: 'Parcel Deliveries', path: '/parcels-admin'),
           _NavItem(icon: Icons.account_balance_wallet_outlined, label: 'Transactions', path: '/transactions'),
           _NavItem(icon: Icons.settings_outlined, label: 'Settings', path: '/settings'),
           const Divider(),

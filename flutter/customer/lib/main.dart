@@ -32,6 +32,9 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/profile/wallet_screen.dart';
 import 'screens/profile/pearl_points_screen.dart';
 import 'screens/concierge/concierge_screen.dart';
+import 'screens/airport_transfer/airport_transfer_screen.dart';
+import 'screens/office_transport/office_transport_screen.dart';
+import 'screens/parcel/parcel_delivery_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,6 +116,11 @@ class PearlHubCustomerApp extends ConsumerWidget {
 
             GoRoute(path: '/social', builder: (_, __) => const SocialFeedScreen()),
             GoRoute(path: '/sme', builder: (_, __) => const SMEListScreen()),
+
+            // Transport verticals
+            GoRoute(path: '/airport-transfer', builder: (_, __) => const AirportTransferScreen()),
+            GoRoute(path: '/office-transport', builder: (_, __) => const OfficeTransportScreen()),
+            GoRoute(path: '/parcel', builder: (_, __) => const ParcelDeliveryScreen()),
 
             // Taxi
             GoRoute(path: '/taxi', builder: (_, __) => const TaxiHomeScreen(),
