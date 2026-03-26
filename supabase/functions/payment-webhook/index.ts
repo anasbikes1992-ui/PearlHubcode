@@ -176,6 +176,45 @@ Deno.serve(async (req: Request) => {
             })
             .then(() => console.log("[NOTIFICATION] Payment success notification created"))
             .catch((err) => console.error("Failed to create notification:", err));
+
+          // Send WhatsApp confirmation if WA_API_TOKEN is configured
+          const waToken = Deno.env.get("WA_API_TOKEN");
+          if (waToken && bookingUserId) {
+            try {
+              const { data: userProfile } = await serviceClient
+                .from("profiles")
+                .select("full_name, phone")
+                .eq("id", bookingUserId)
+                .maybeSingle();
+
+              if (userProfile?.phone) {
+                const phone = userProfile.phone.replace(/[^0-9]/g, "");
+                const message =
+                  `✅ *Payment Confirmed – Pearl Hub*\n\n` +
+                  `Hi ${userProfile.full_name ?? "Valued Customer"},\n\n` +
+                  `Your payment of ${currency} ${Number(amount).toLocaleString()} has been received.\n` +
+                  `🔖 Order Ref: ${orderId}\n` +
+                  `📋 Booking: #${bookingId}\n\n` +
+                  `Thank you for choosing Pearl Hub! 🇱🇰`;
+
+                await fetch("https://wa-api.me/api/wa-accounts/messages", {
+                  method: "POST",
+                  headers: {
+                    "Authorization": `Bearer ${waToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    participants: [{ number: phone }],
+                    messageType: "text",
+                    message,
+                  }),
+                }).catch((err) => console.error("WA payment receipt failed:", err));
+              }
+            } catch (waErr) {
+              console.error("WA notification error:", waErr);
+              // Non-critical — don't fail the webhook
+            }
+          }
         }
       }
     }

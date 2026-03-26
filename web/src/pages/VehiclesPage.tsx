@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/store/useStore";
+import { useAuth } from "@/context/AuthContext";
 import LeafletMap from "@/components/LeafletMap";
 import CheckoutModal from "@/components/CheckoutModal";
 import InquiryModal from "@/components/InquiryModal";
@@ -17,8 +18,10 @@ import { PlusCircle, Pencil, Trash2, Sparkles } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { getRecommendations, Recommandable } from "@/lib/recommendations";
 import { useVehicles } from "@/hooks/useListings";
+import { sendBookingConfirmation } from "@/lib/whatsapp";
 
 const VehiclesPage = () => {
+  const { profile } = useAuth();
   const { 
     currentUser, userRole, 
     addNotification, addRecentlyViewed,
@@ -39,7 +42,7 @@ const VehiclesPage = () => {
   });
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [selected, setSelected] = useState<Vehicle | null>(null);
-  const [form, setForm] = useState({ startDate: "", endDate: "", pickupTime: "09:00", returnTime: "09:00", driver: "no", agreedToTerms: false });
+  const [form, setForm] = useState({ startDate: "", endDate: "", pickupTime: "09:00", returnTime: "09:00", driver: "no", agreedToTerms: false, agreedToDeposit: false, kycNicNumber: "", kycLicenseNumber: "" });
   const [showTerms, setShowTerms] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showInquiry, setShowInquiry] = useState(false);
@@ -78,12 +81,28 @@ const VehiclesPage = () => {
   const baseTotal = selected ? selected.price_per_day * days : 0;
   const driverTotal = form.driver === "yes" && !selected?.with_driver ? driverRate * days : 0;
   const grandTotal = baseTotal + driverTotal;
+  // Security deposit: 20% of rental (min Rs. 5,000, max Rs. 75,000), waived for with-driver bookings
+  const securityDeposit = selected
+    ? form.driver === "no" && !selected.with_driver
+      ? Math.min(Math.max(Math.round(grandTotal * 0.2 / 500) * 500, 5000), 75000)
+      : 0
+    : 0;
 
-  const handleBookingSuccess = () => {
+  const handleBookingSuccess = (bookingRef?: string) => {
     addNotification("Success", "🚗 Vehicle booked successfully! Confirmation sent to your email.");
     const bookedVehicle = selected;
     setSelected(null);
     setShowPayment(false);
+    // Send WhatsApp confirmation if customer has a phone number
+    if (profile?.phone && bookedVehicle && bookingRef) {
+      sendBookingConfirmation(profile.phone.replace(/[^0-9]/g, ""), {
+        customerName: profile.full_name ?? "Valued Customer",
+        listingTitle: bookedVehicle.title,
+        bookingRef,
+        totalAmount: grandTotal,
+        currency: bookedVehicle.currency ?? "LKR",
+      }).catch(console.error);
+    }
     if (bookedVehicle) {
       setTrackerVehicle(bookedVehicle);
       setShowTracker(true);
@@ -136,13 +155,33 @@ const VehiclesPage = () => {
       </div>
 
       <div className="container py-10">
-        {viewMode === "map" ? (
+        {vehiclesLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="bg-card/80 rounded-xl overflow-hidden border border-border animate-pulse">
+                <div className="h-36 bg-muted/30" />
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-muted/30 rounded w-3/4" />
+                  <div className="h-4 bg-muted/30 rounded w-1/2" />
+                  <div className="h-6 bg-muted/30 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-5xl mb-4">🚗</div>
+            <h3 className="text-xl font-bold text-foreground mb-2">No vehicles found</h3>
+            <p className="text-muted-foreground mb-6">Try adjusting your filters or check back later for new listings.</p>
+            <button onClick={() => setFilter({ type: "all", driver: "all", location: "" })} className="px-6 py-2.5 rounded-lg bg-ruby text-pearl text-sm font-bold hover:bg-ruby/90 transition-all">Clear All Filters</button>
+          </div>
+        ) : viewMode === "map" ? (
           <LeafletMap markers={mapMarkers} center={[7.8731, 80.7718]} zoom={8} height="500px" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((v, i) => (
               <motion.div key={v.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                onClick={() => { setSelected(v); setForm({ startDate: "", endDate: "", pickupTime: "09:00", returnTime: "09:00", driver: v.with_driver ? "yes" : "no", agreedToTerms: false }); addRecentlyViewed({ id: v.id, title: v.title, type: "vehicle", price: v.price_per_day, image: v.images[0], location: v.location }); }}
+                onClick={() => { setSelected(v); setForm({ startDate: "", endDate: "", pickupTime: "09:00", returnTime: "09:00", driver: v.with_driver ? "yes" : "no", agreedToTerms: false, agreedToDeposit: false, kycNicNumber: "", kycLicenseNumber: "" }); addRecentlyViewed({ id: v.id, title: v.title, type: "vehicle", price: v.price_per_day, image: v.images[0], location: v.location }); }}
                 className="bg-card/80 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer border border-border">
                 <div className="h-36 relative overflow-hidden">
                   {v.images[0].startsWith("http") ? (
@@ -289,6 +328,7 @@ const VehiclesPage = () => {
                       <div className="flex justify-between text-xs text-muted-foreground"><span>Excess KM rate</span><span>Rs. {excessKmRate}/km</span></div>
                       <div className="h-px bg-border my-2" />
                       <div className="flex justify-between font-bold text-base"><span>Estimated Total</span><span className="text-ruby">Rs. {grandTotal.toLocaleString()}</span></div>
+                      {securityDeposit > 0 && <div className="flex justify-between text-xs text-sapphire"><span>🔐 Security Deposit (at pickup, refundable)</span><span>Rs. {securityDeposit.toLocaleString()}</span></div>}
                       <div className="text-[11px] text-muted-foreground">* Final amount may vary based on actual KM driven</div>
                     </div>
                   </div>
@@ -310,9 +350,52 @@ const VehiclesPage = () => {
                   <span>I agree to the <button type="button" onClick={() => setShowTerms(true)} className="text-primary font-semibold underline">Vehicle Rental Terms & Conditions</button> including the KM limits, excess charges, and cancellation policy.</span>
                 </label>
 
+                {/* KYC Section */}
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-bold text-amber-500 mb-3 flex items-center gap-2">🪪 Identity Verification (KYC)</h4>
+                  <p className="text-xs text-muted-foreground mb-3">Required for vehicle rentals. Bring originals to pickup.</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">National ID (NIC) Number</label>
+                      <input type="text" placeholder="e.g. 199012345678 or 901234567V" value={form.kycNicNumber} onChange={e => setForm({...form, kycNicNumber: e.target.value})}
+                        className="w-full rounded-md border border-input px-3 py-2 text-sm" />
+                    </div>
+                    {form.driver === "no" && !selected?.with_driver && (
+                      <div>
+                        <label className="block text-xs font-semibold mb-1">Driving License Number</label>
+                        <input type="text" placeholder="e.g. B1234567" value={form.kycLicenseNumber} onChange={e => setForm({...form, kycLicenseNumber: e.target.value})}
+                          className="w-full rounded-md border border-input px-3 py-2 text-sm" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Security Deposit */}
+                {securityDeposit > 0 && (
+                  <div className="bg-sapphire/5 border border-sapphire/20 rounded-lg p-4 mb-4">
+                    <h4 className="text-sm font-bold text-sapphire mb-2 flex items-center gap-2">🔐 Security Deposit</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">Refundable deposit (returned after safe return of vehicle)</span>
+                      <span className="text-base font-bold text-sapphire">Rs. {securityDeposit.toLocaleString()}</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground space-y-1">
+                      <p>• Collected on vehicle pickup — not charged online now</p>
+                      <p>• Fully refunded within 48 hrs after vehicle returned in good condition</p>
+                      <p>• May be forfeited in case of damage, excessive KM overrun, or fuel shortfall</p>
+                    </div>
+                    <label className="flex items-start gap-2 text-xs text-muted-foreground mt-3 cursor-pointer">
+                      <input type="checkbox" checked={form.agreedToDeposit} onChange={e => setForm({...form, agreedToDeposit: e.target.checked})} className="mt-0.5 rounded" />
+                      <span>I understand and agree to the security deposit of <strong className="text-foreground">Rs. {securityDeposit.toLocaleString()}</strong>, payable at vehicle pickup.</span>
+                    </label>
+                  </div>
+                )}
+
                 <button onClick={() => {
                   if (!form.startDate || !form.endDate) { addNotification("Error", "Please select dates."); return; }
                   if (!form.agreedToTerms) { addNotification("Error", "Please agree to the Terms & Conditions."); return; }
+                  if (securityDeposit > 0 && !form.agreedToDeposit) { addNotification("Error", "Please acknowledge the security deposit."); return; }
+                  if (!form.kycNicNumber.trim()) { addNotification("Error", "Please enter your NIC number for identity verification."); return; }
+                  if (form.driver === "no" && !selected?.with_driver && !form.kycLicenseNumber.trim()) { addNotification("Error", "Please enter your driving license number."); return; }
                   setShowPayment(true);
                 }} className="w-full bg-ruby hover:bg-ruby-light text-pearl py-3 rounded-lg font-bold transition-all mb-2">💳 Book & Pay Rs. {grandTotal.toLocaleString()} via LankaPay</button>
                 <button onClick={() => setShowInquiry(true)}
