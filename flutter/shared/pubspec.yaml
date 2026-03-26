@@ -1,5 +1,6 @@
 name: pearlhub_shared
 description: Shared models, services, and utilities for PearlHub Flutter apps
+publish_to: none
 version: 1.0.0
 
 environment:

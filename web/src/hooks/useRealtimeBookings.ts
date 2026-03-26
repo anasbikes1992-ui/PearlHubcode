@@ -1,6 +1,6 @@
 // useRealtimeBookings.ts - Real-time booking subscriptions
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, db } from '@/integrations/supabase/client';
 import type { RealtimeBooking } from '@/types/marketplace';
 
 export const useRealtimeBookings = (providerId: string) => {
@@ -14,7 +14,7 @@ export const useRealtimeBookings = (providerId: string) => {
     // Fetch initial bookings
     const fetchInitialBookings = async () => {
       try {
-        const { data, error: fetchError } = await supabase
+        const { data, error: fetchError } = await db
           .from('bookings')
           .select('*')
           .eq('provider_id', providerId)
@@ -77,7 +77,7 @@ export const useBookingStatus = (bookingId: string) => {
     if (!bookingId) return;
 
     const fetchBooking = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('bookings')
         .select('*')
         .eq('id', bookingId)
@@ -125,7 +125,7 @@ export const useUserBookings = (userId: string) => {
     if (!userId) return;
 
     const fetchBookings = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('bookings')
         .select('*')
         .eq('user_id', userId)

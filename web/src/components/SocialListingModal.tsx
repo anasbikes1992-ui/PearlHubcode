@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import ImageUpload from "@/components/ImageUpload";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { useStore } from "@/store/useStore";
 import { Loader2, Store, MapPin, Sparkles, Image as ImageIcon, Banknote, Map as MapIcon } from "lucide-react";
 import LeafletMap from "./LeafletMap";
@@ -123,9 +123,9 @@ const SocialListingModal = ({ open, onClose, onSuccess, editData }: Props) => {
 
       let error;
       if (editData) {
-        ({ error } = await (supabase.from("social_listings" as any).update(data) as any).eq("id", editData.id));
+        ({ error } = await db.from("social_listings").update(data).eq("id", editData.id));
       } else {
-        ({ error } = await (supabase.from("social_listings" as any).insert(data) as any));
+        ({ error } = await db.from("social_listings").insert(data));
       }
 
       if (error) throw error;

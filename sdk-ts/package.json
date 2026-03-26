@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "lint": "tsc --noEmit"
+    "lint": "npx tsc --noEmit",
+    "test": "echo \"No tests configured yet\" && exit 0"
   },
   "keywords": ["pearlhub", "sdk", "supabase", "sri-lanka", "travel"],
   "license": "MIT",

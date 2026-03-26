@@ -1,6 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pearlhub_shared/services/auth_service.dart';
+import '../../services/auth_service.dart';
 
 final taxiAdminSnapshotProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final supabase = ref.read(supabaseProvider);
@@ -113,7 +113,7 @@ class _TaxiAdminScreenState extends ConsumerState<TaxiAdminScreen> {
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text((c['name'] ?? '').toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text('Base fare: LKR ${c['base_fare'] ?? 0}  •  Per km: LKR ${c['per_km_rate'] ?? 0}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              Text('Base fare: LKR ${c['base_fare'] ?? 0}  �  Per km: LKR ${c['per_km_rate'] ?? 0}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
             ])),
             Switch(
               value: c['is_active'] == true,

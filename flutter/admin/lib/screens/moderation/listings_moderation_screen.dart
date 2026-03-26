@@ -3,9 +3,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pearlhub_shared/models/user_profile.dart';
-import 'package:pearlhub_shared/services/auth_service.dart';
-import 'package:pearlhub_shared/services/listings_service.dart';
+import '../../models/user_profile.dart';
+import '../../services/auth_service.dart';
+import '../../services/listings_service.dart';
 
 // Dynamic provider for any vertical's listings
 final verticalListingsProvider =

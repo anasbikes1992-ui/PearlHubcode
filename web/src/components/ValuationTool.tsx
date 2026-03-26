@@ -1,10 +1,10 @@
 /**
- * ValuationTool — AI-powered property valuation using comparable listings.
+ * ValuationTool â€” AI-powered property valuation using comparable listings.
  * Public-facing tool that drives organic traffic from property owners.
  */
 
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, TrendingUp, Loader2, MapPin, Home, BedDouble, Bath, Ruler, AlertCircle } from "lucide-react";
 import { SRI_LANKA_LOCATIONS } from "@/lib/utils";
@@ -32,7 +32,7 @@ export default function ValuationTool() {
     setLoading(true);
     try {
       // Pull comparable properties from Supabase
-      const { data: comps } = await (supabase as any)
+      const { data: comps } = await db
         .from("properties_listings")
         .select("price, beds, baths, area")
         .ilike("location", `%${form.location}%`)
@@ -60,7 +60,7 @@ export default function ValuationTool() {
         const key = Object.keys(basePerPerch).find(k =>
           form.location.toLowerCase().includes(k.toLowerCase())
         ) ?? "Colombo";
-        const basePerSqft = basePerPerch[key] / 9.29; // perch → sqft
+        const basePerSqft = basePerPerch[key] / 9.29; // perch â†’ sqft
         mid = Math.round(basePerSqft * form.area * (form.type === "villa" ? 1.3 : 1));
         confidence = "low";
       }
@@ -136,7 +136,7 @@ export default function ValuationTool() {
               onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-pearl outline-none focus:border-primary/50"
             >
-              <option value="">Select…</option>
+              <option value="">Selectâ€¦</option>
               {SRI_LANKA_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
           </div>
@@ -194,7 +194,7 @@ export default function ValuationTool() {
           className="w-full bg-primary hover:bg-gold-light text-primary-foreground py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
-          {loading ? "Analysing market data…" : "Get Free Valuation"}
+          {loading ? "Analysing market dataâ€¦" : "Get Free Valuation"}
         </button>
 
         {/* Result */}
@@ -208,7 +208,7 @@ export default function ValuationTool() {
                   Rs. {result.mid.toLocaleString()}
                 </p>
                 <p className="text-xs text-mist/50">
-                  Range: Rs. {result.low.toLocaleString()} – Rs. {result.high.toLocaleString()}
+                  Range: Rs. {result.low.toLocaleString()} â€“ Rs. {result.high.toLocaleString()}
                 </p>
               </div>
 

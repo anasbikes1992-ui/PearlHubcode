@@ -19,6 +19,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/store/useStore";
+import type { Stay, Vehicle, PearlEvent, Property } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Car, Hotel, MapPin, Calendar,
@@ -52,25 +53,25 @@ const ICON_MAP = {
 
 // ── Build context string from current listings ──────────────
 function buildListingContext(
-  stays: any[],
-  vehicles: any[],
-  events: any[],
-  properties: any[]
+  stays: Stay[],
+  vehicles: Vehicle[],
+  events: PearlEvent[],
+  properties: Property[]
 ): string {
-  const fmt = (items: any[], label: string, nameKey: string, priceKey: string, locKey: string) =>
+  const fmt = (items: Record<string, unknown>[], nameKey: string, priceKey: string, locKey: string) =>
     items.slice(0, 5).map(i =>
-      `  - ${i[nameKey]} (${i[locKey]}, Rs.${i[priceKey]?.toLocaleString() ?? "?"})`
+      `  - ${i[nameKey]} (${i[locKey]}, Rs.${(i[priceKey] as number)?.toLocaleString() ?? "?"})`
     ).join("\n") || `  (none available)`;
 
   return `
 Available stays (sample):
-${fmt(stays, "stays", "name", "price_per_night", "location")}
+${fmt(stays, "name", "price_per_night", "location")}
 
 Available vehicles (sample):
-${fmt(vehicles, "vehicles", "title", "price_per_day", "location")}
+${fmt(vehicles, "title", "price_per_day", "location")}
 
 Upcoming events (sample):
-${fmt(events, "events", "title", "price_standard", "location")}
+${fmt(events, "title", "price_standard", "location")}
 `.trim();
 }
 

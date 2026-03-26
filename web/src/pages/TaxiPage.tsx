@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/store/useStore";
 import { useTaxiCategories, validateTaxiPromo } from "@/hooks/useListings";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import LeafletMap from "@/components/LeafletMap";
 import TrustBanner from "@/components/TrustBanner";
 import { TaxiVehicleCategory } from "@/types";
@@ -76,7 +76,7 @@ const TaxiPage = () => {
     if (!selectedCat || !user) { addNotification("Error", "Please sign in and select a vehicle."); return; }
     setRideState("searching");
     const fare = calcFare(selectedCat);
-    const rideData: Record<string, any> = {
+    const rideData = {
       customer_id: user.id,
       vehicle_category_id: selectedCat.id,
       pickup_lat: 6.9271, pickup_lng: 79.8612, pickup_address: pickup,
@@ -86,11 +86,9 @@ const TaxiPage = () => {
       scheduled_for: scheduleTime || null,
       promo_id: promoId,
       stops: stops.length > 1 ? stops.map(s => ({ address: s })) : null,
+      parcel_details: mode === "parcel" ? { recipient_name: recipient, phone, package_size: packageSize } : null,
     };
-    if (mode === "parcel") {
-      rideData.parcel_details = { recipient_name: recipient, phone, package_size: packageSize };
-    }
-    const { data, error } = await (supabase as any).from("taxi_rides").insert(rideData).select().single();
+    const { data, error } = await db.from("taxi_rides").insert(rideData).select().single();
     if (error) { addNotification("Error", "Ride creation failed."); setRideState("none"); return; }
     setCurrentRideId(data.id);
     addNotification("Searching", "Finding your driver...");
@@ -98,26 +96,26 @@ const TaxiPage = () => {
   };
 
   const cancelRide = async () => {
-    if (currentRideId) await (supabase as any).from("taxi_rides").update({ status: "cancelled" }).eq("id", currentRideId);
+    if (currentRideId) await db.from("taxi_rides").update({ status: "cancelled" }).eq("id", currentRideId);
     setRideState("none"); setCurrentRideId(null);
   };
 
   const submitRating = async () => {
     if (currentRideId && user) {
       // Fetch the ride to get the driver_id before inserting the rating
-      const { data: rideData } = await (supabase as any).from("taxi_rides").select("driver_id").eq("id", currentRideId).single();
-      await (supabase as any).from("taxi_ratings").insert({
+      const { data: rideData } = await db.from("taxi_rides").select("driver_id").eq("id", currentRideId).single();
+      await db.from("taxi_ratings").insert({
         ride_id: currentRideId, reviewer_id: user.id, target_id: rideData?.driver_id ?? user.id,
         rating, tip_amount: parseFloat(tip) || 0,
       });
-      await (supabase as any).from("taxi_rides").update({ status: "completed" }).eq("id", currentRideId);
+      await db.from("taxi_rides").update({ status: "completed" }).eq("id", currentRideId);
     }
     addNotification("Ride Complete", "Thank you for choosing Pearl Taxi!");
     setRideState("none"); setCurrentRideId(null); setRating(0); setTip("");
   };
 
   const triggerSOS = async () => {
-    if (currentRideId) await (supabase as any).from("taxi_rides").update({ is_emergency_sos: true }).eq("id", currentRideId);
+    if (currentRideId) await db.from("taxi_rides").update({ is_emergency_sos: true }).eq("id", currentRideId);
     addNotification("🚨 SOS", "Emergency services have been notified.");
   };
 

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import ImageUpload from "@/components/ImageUpload";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { useStore } from "@/store/useStore";
 import { Loader2, Home, MapPin, Ruler, Bed, Bath, Banknote, Sparkles, Image as ImageIcon } from "lucide-react";
 
@@ -137,9 +137,9 @@ const PropertyListingModal = ({ open, onClose, onSuccess, editData }: Props) => 
 
     let error;
     if (editData) {
-      ({ error } = await (supabase.from("properties_listings" as any).update(payload) as any).eq("id", editData.id));
+      ({ error } = await db.from("properties_listings").update(payload).eq("id", editData.id));
     } else {
-      ({ error } = await supabase.from("properties_listings" as any).insert(payload));
+      ({ error } = await db.from("properties_listings").insert(payload));
     }
 
     setSaving(false);

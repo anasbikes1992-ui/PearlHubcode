@@ -1,11 +1,11 @@
 /**
- * PricingAdvisor — dynamic pricing suggestions for providers.
+ * PricingAdvisor â€” dynamic pricing suggestions for providers.
  * Uses platform booking data + local event calendar to suggest
  * optimal prices by day of week and season.
  */
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { TrendingUp, TrendingDown, Minus, Sparkles, Loader2, Calendar, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -63,7 +63,7 @@ export default function PricingAdvisor({ listingId, listingType, currentPrice, c
       // Market average for similar listings in location
       const table = listingType === "stay" ? "stays_listings" : "vehicles_listings";
       const priceCol = listingType === "stay" ? "price_per_night" : "price_per_day";
-      const { data: market } = await (supabase as any)
+      const { data: market } = await db
         .from(table)
         .select(priceCol)
         .ilike("location", `%${location.split(" ")[0] || "Colombo"}%`)
@@ -77,7 +77,7 @@ export default function PricingAdvisor({ listingId, listingType, currentPrice, c
 
       // Occupancy from bookings in last 30 days
       const d30 = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
-      const { data: bks } = await (supabase as any)
+      const { data: bks } = await db
         .from("bookings")
         .select("check_in_date, check_out_date")
         .eq("listing_id", listingId)
@@ -118,7 +118,7 @@ export default function PricingAdvisor({ listingId, listingType, currentPrice, c
   if (loading) return (
     <div className="flex items-center justify-center py-6 gap-2">
       <Loader2 className="animate-spin text-primary/40" size={18} />
-      <span className="text-xs text-mist/40">Analysing market data…</span>
+      <span className="text-xs text-mist/40">Analysing market dataâ€¦</span>
     </div>
   );
 
@@ -149,7 +149,7 @@ export default function PricingAdvisor({ listingId, listingType, currentPrice, c
           <p className="text-[10px] text-mist/50 mt-1 leading-relaxed">
             {marketAvg && `Market average ${location ? `in ${location}` : ""}: Rs. ${marketAvg.toLocaleString()}. `}
             {upcomingEvents.length > 0 && `${upcomingEvents[0].name} demand surge detected. `}
-            {seasonalFactor > 0 ? "Peak season — rates can be higher." : seasonalFactor < -0.1 ? "Off-season — competitive pricing advised." : ""}
+            {seasonalFactor > 0 ? "Peak season â€” rates can be higher." : seasonalFactor < -0.1 ? "Off-season â€” competitive pricing advised." : ""}
           </p>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function PricingAdvisor({ listingId, listingType, currentPrice, c
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-[9px] text-mist/30 text-center mt-1">Fri–Sun rates highlighted — typically 20–30% higher demand</p>
+        <p className="text-[9px] text-mist/30 text-center mt-1">Friâ€“Sun rates highlighted â€” typically 20â€“30% higher demand</p>
       </div>
 
       {/* Upcoming events */}

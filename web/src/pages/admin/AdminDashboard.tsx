@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, db } from '@/integrations/supabase/client';
 import { Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { fetchAdminMetrics, resolveUserReport, type AdminMetrics } from '@/lib/admin-control';
@@ -27,7 +27,7 @@ const StatusBadge = ({ status }: { status: ListingStatus }) => {
   return <Badge variant="outline" className={`uppercase text-[10px] font-black tracking-widest ${variants[status]}`}>{status}</Badge>;
 };
 
-// ── Status control modal ──────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Status control modal Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function StatusControlModal({
   open, onClose, itemName, currentStatus, onSave,
 }: {
@@ -112,7 +112,7 @@ function StatusControlModal({
   );
 }
 
-// ── Admin Table Row ───────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Admin Table Row Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function AdminTableRow({
   id, title, location, price, status, createdAt, providerLabel,
   onStatusChange, onDelete,
@@ -128,7 +128,7 @@ function AdminTableRow({
     <tr className="hover:bg-white/5 transition-colors border-b border-white/5 group">
       <td className="px-6 py-4">
         <p className="font-bold text-sm text-pearl max-w-[200px] truncate group-hover:text-primary transition-colors">{title}</p>
-        {location && <p className="text-[11px] text-mist mt-0.5 font-medium">📍 {location}</p>}
+        {location && <p className="text-[11px] text-mist mt-0.5 font-medium">Ã°Å¸â€œÂ {location}</p>}
       </td>
       <td className="px-6 py-4 text-[11px] text-mist font-bold uppercase tracking-tight">{providerLabel}</td>
       <td className="px-6 py-4">{price && <span className="text-sm font-black text-primary">{price}</span>}</td>
@@ -149,7 +149,7 @@ function AdminTableRow({
             onClick={() => { if (confirm('Delete this listing?')) onDelete(id) }}
             className="h-8 rounded-lg text-ruby hover:bg-ruby/10 p-2"
           >
-            🗑️
+            Ã°Å¸â€”â€˜Ã¯Â¸Â
           </Button>
         </div>
         <StatusControlModal
@@ -167,7 +167,7 @@ function AdminTableRow({
 
 
 
-// ── Main Admin Dashboard ──────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Main Admin Dashboard Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export default function AdminDashboard() {
   const {
     currentUser, userRole,
@@ -188,7 +188,7 @@ export default function AdminDashboard() {
 
     setMetricsLoading(true);
     Promise.all([
-      supabase.from('user_reports' as any).select('*').in('status', ['pending', 'investigating']).order('created_at', { ascending: false }),
+      db.from('user_reports').select('*').in('status', ['pending', 'investigating']).order('created_at', { ascending: false }),
       fetchAdminMetrics(30),
     ])
       .then(([reportsRes, metricsRes]) => {
@@ -220,21 +220,21 @@ export default function AdminDashboard() {
   };
 
   const TABS: { id: AdminTab; label: string; icon: string; count?: number }[] = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'gods_view', label: "God's View", icon: '🗺️' },
-    { id: 'stays', label: 'Stays', icon: '🏨', count: stats.stays },
-    { id: 'vehicles', label: 'Vehicles', icon: '🚗', count: stats.vehicles },
-    { id: 'taxi', label: 'Taxi', icon: '🚕' },
-    { id: 'events', label: 'Events', icon: '🎭', count: stats.events },
-    { id: 'properties', label: 'Props', icon: '🏡', count: stats.properties },
-    { id: 'social', label: 'Social', icon: '🌏', count: stats.social },
-    { id: 'sme', label: 'SMEs', icon: '🛍️', count: stats.sme },
-    { id: 'users', label: 'Users', icon: '👥' },
-    { id: 'finance', label: 'Finance', icon: '💰' },
-    { id: 'coupons', label: 'Coupons', icon: '🏷️' },
-    { id: 'alerts', label: 'Alerts', icon: '🚩', count: reports.length },
-    { id: 'ops', label: 'Ops Audit', icon: '📋' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
+    { id: 'overview', label: 'Overview', icon: 'Ã°Å¸â€œÅ ' },
+    { id: 'gods_view', label: "God's View", icon: 'Ã°Å¸â€”ÂºÃ¯Â¸Â' },
+    { id: 'stays', label: 'Stays', icon: 'Ã°Å¸ÂÂ¨', count: stats.stays },
+    { id: 'vehicles', label: 'Vehicles', icon: 'Ã°Å¸Å¡â€”', count: stats.vehicles },
+    { id: 'taxi', label: 'Taxi', icon: 'Ã°Å¸Å¡â€¢' },
+    { id: 'events', label: 'Events', icon: 'Ã°Å¸Å½Â­', count: stats.events },
+    { id: 'properties', label: 'Props', icon: 'Ã°Å¸ÂÂ¡', count: stats.properties },
+    { id: 'social', label: 'Social', icon: 'Ã°Å¸Å’Â', count: stats.social },
+    { id: 'sme', label: 'SMEs', icon: 'Ã°Å¸â€ºÂÃ¯Â¸Â', count: stats.sme },
+    { id: 'users', label: 'Users', icon: 'Ã°Å¸â€˜Â¥' },
+    { id: 'finance', label: 'Finance', icon: 'Ã°Å¸â€™Â°' },
+    { id: 'coupons', label: 'Coupons', icon: 'Ã°Å¸ÂÂ·Ã¯Â¸Â' },
+    { id: 'alerts', label: 'Alerts', icon: 'Ã°Å¸Å¡Â©', count: reports.length },
+    { id: 'ops', label: 'Ops Audit', icon: 'Ã°Å¸â€œâ€¹' },
+    { id: 'settings', label: 'Settings', icon: 'Ã¢Å¡â„¢Ã¯Â¸Â' },
   ];
 
   return (
@@ -243,10 +243,10 @@ export default function AdminDashboard() {
       <div className="bg-primary/10 border-b border-primary/20 backdrop-blur-md sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-3xl shadow-lg border border-primary/20">🛡️</div>
+            <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-3xl shadow-lg border border-primary/20">Ã°Å¸â€ºÂ¡Ã¯Â¸Â</div>
             <div>
               <h1 className="text-2xl font-black text-pearl tracking-tight">Admin Control Panel</h1>
-              <p className="text-mist text-xs font-bold uppercase tracking-[0.2em] mt-1">Total System Management · Sri Lanka</p>
+              <p className="text-mist text-xs font-bold uppercase tracking-[0.2em] mt-1">Total System Management Ã‚Â· Sri Lanka</p>
             </div>
             {stats.pending > 0 && (
               <div className="ml-auto bg-ruby text-white text-[10px] font-black px-4 py-2 rounded-full shadow-lg shadow-ruby/20 flex items-center gap-2 animate-pulse uppercase tracking-wider">
@@ -290,12 +290,12 @@ export default function AdminDashboard() {
             {metrics && (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {[
-                  { label: 'Users', value: metrics.users_total, icon: '👥', color: 'text-sapphire bg-sapphire/10' },
-                  { label: 'Providers', value: metrics.providers_total, icon: '🧭', color: 'text-indigo-500 bg-indigo-500/10' },
-                  { label: 'Bookings 30d', value: metrics.bookings_total, icon: '🧾', color: 'text-emerald-500 bg-emerald-500/10' },
-                  { label: 'GMV LKR 30d', value: formatPrice(metrics.gmv_lkr_window, 'LKR'), icon: '💰', color: 'text-amber-500 bg-amber-500/10' },
-                  { label: 'Open Reports', value: metrics.reports_open, icon: '🚩', color: 'text-ruby bg-ruby/10' },
-                  { label: 'Open Rides', value: metrics.rides_open, icon: '🚕', color: 'text-teal-500 bg-teal-500/10' },
+                  { label: 'Users', value: metrics.users_total, icon: 'Ã°Å¸â€˜Â¥', color: 'text-sapphire bg-sapphire/10' },
+                  { label: 'Providers', value: metrics.providers_total, icon: 'Ã°Å¸Â§Â­', color: 'text-indigo-500 bg-indigo-500/10' },
+                  { label: 'Bookings 30d', value: metrics.bookings_total, icon: 'Ã°Å¸Â§Â¾', color: 'text-emerald-500 bg-emerald-500/10' },
+                  { label: 'GMV LKR 30d', value: formatPrice(metrics.gmv_lkr_window, 'LKR'), icon: 'Ã°Å¸â€™Â°', color: 'text-amber-500 bg-amber-500/10' },
+                  { label: 'Open Reports', value: metrics.reports_open, icon: 'Ã°Å¸Å¡Â©', color: 'text-ruby bg-ruby/10' },
+                  { label: 'Open Rides', value: metrics.rides_open, icon: 'Ã°Å¸Å¡â€¢', color: 'text-teal-500 bg-teal-500/10' },
                 ].map((stat) => (
                   <div key={stat.label} className={`rounded-2xl p-5 border border-white/10 group hover:border-white/20 transition-all ${stat.color}`}>
                     <div className="text-2xl mb-3 group-hover:scale-110 transition-transform">{stat.icon}</div>
@@ -314,13 +314,13 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               {[
-                { label: 'Stays', value: stats.stays, icon: '🏨', color: 'text-emerald-500 bg-emerald-500/10' },
-                { label: 'Vehicles', value: stats.vehicles, icon: '🚗', color: 'text-sapphire bg-sapphire/10' },
-                { label: 'Events', value: stats.events, icon: '🎭', color: 'text-indigo-500 bg-indigo-500/10' },
-                { label: 'Props', value: stats.properties, icon: '🏡', color: 'text-amber-500 bg-amber-500/10' },
-                { label: 'Posts', value: stats.social, icon: '🌏', color: 'text-teal-500 bg-teal-500/10' },
-                { label: 'SMEs', value: stats.sme, icon: '🛍️', color: 'text-orange-500 bg-orange-500/10' },
-                { label: 'Pending', value: stats.pending, icon: '⏳', color: 'text-ruby bg-ruby/10' },
+                { label: 'Stays', value: stats.stays, icon: 'Ã°Å¸ÂÂ¨', color: 'text-emerald-500 bg-emerald-500/10' },
+                { label: 'Vehicles', value: stats.vehicles, icon: 'Ã°Å¸Å¡â€”', color: 'text-sapphire bg-sapphire/10' },
+                { label: 'Events', value: stats.events, icon: 'Ã°Å¸Å½Â­', color: 'text-indigo-500 bg-indigo-500/10' },
+                { label: 'Props', value: stats.properties, icon: 'Ã°Å¸ÂÂ¡', color: 'text-amber-500 bg-amber-500/10' },
+                { label: 'Posts', value: stats.social, icon: 'Ã°Å¸Å’Â', color: 'text-teal-500 bg-teal-500/10' },
+                { label: 'SMEs', value: stats.sme, icon: 'Ã°Å¸â€ºÂÃ¯Â¸Â', color: 'text-orange-500 bg-orange-500/10' },
+                { label: 'Pending', value: stats.pending, icon: 'Ã¢ÂÂ³', color: 'text-ruby bg-ruby/10' },
               ].map((stat) => (
                 <div key={stat.label} className={`rounded-2xl p-5 border border-white/10 group hover:border-white/20 transition-all ${stat.color}`}>
                   <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">{stat.icon}</div>
@@ -336,13 +336,13 @@ export default function AdminDashboard() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { label: 'Review Stays', icon: '🏨', action: () => setTab('stays') },
-                  { label: 'Manage Fleet', icon: '🚗', action: () => setTab('vehicles') },
-                  { label: 'Taxi Config', icon: '🚕', action: () => setTab('taxi') },
-                  { label: 'Audit Events', icon: '🎭', action: () => setTab('events') },
-                  { label: 'Property List', icon: '🏡', action: () => setTab('properties') },
-                  { label: 'Social Mods', icon: '🌏', action: () => setTab('social') },
-                  { label: 'SME Registry', icon: '🛍️', action: () => setTab('sme') },
+                  { label: 'Review Stays', icon: 'Ã°Å¸ÂÂ¨', action: () => setTab('stays') },
+                  { label: 'Manage Fleet', icon: 'Ã°Å¸Å¡â€”', action: () => setTab('vehicles') },
+                  { label: 'Taxi Config', icon: 'Ã°Å¸Å¡â€¢', action: () => setTab('taxi') },
+                  { label: 'Audit Events', icon: 'Ã°Å¸Å½Â­', action: () => setTab('events') },
+                  { label: 'Property List', icon: 'Ã°Å¸ÂÂ¡', action: () => setTab('properties') },
+                  { label: 'Social Mods', icon: 'Ã°Å¸Å’Â', action: () => setTab('social') },
+                  { label: 'SME Registry', icon: 'Ã°Å¸â€ºÂÃ¯Â¸Â', action: () => setTab('sme') },
                 ].map((action) => (
                   <button
                     key={action.label}
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
           />
         )}
 
-        {/* Users — Customer & Provider 360° */}
+        {/* Users Ã¢â‚¬â€ Customer & Provider 360Ã‚Â° */}
         {tab === 'users' && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <UsersPanel360 />
@@ -489,7 +489,7 @@ export default function AdminDashboard() {
   );
 }
 
-// ── Generic Admin Table ───────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Generic Admin Table Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function AdminTable({ title, rows, onStatusChange, onDelete }: {
   title: string
   rows: {
@@ -616,11 +616,11 @@ function StaysEnhancedPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InsightCard label="Total Stays" value={stays.length} icon="🏨" />
-        <InsightCard label="Active" value={activeCount} icon="✅" />
-        <InsightCard label="Pending" value={pendingCount} icon="⏳" />
-        <InsightCard label="Avg Nightly" value={`Rs. ${avgNight.toLocaleString()}`} icon="💰" />
-        <InsightCard label="Top Rating" value={topRated ? topRated.rating.toFixed(1) : '0.0'} icon="⭐" />
+        <InsightCard label="Total Stays" value={stays.length} icon="Ã°Å¸ÂÂ¨" />
+        <InsightCard label="Active" value={activeCount} icon="Ã¢Å“â€¦" />
+        <InsightCard label="Pending" value={pendingCount} icon="Ã¢ÂÂ³" />
+        <InsightCard label="Avg Nightly" value={`Rs. ${avgNight.toLocaleString()}`} icon="Ã°Å¸â€™Â°" />
+        <InsightCard label="Top Rating" value={topRated ? topRated.rating.toFixed(1) : '0.0'} icon="Ã¢Â­Â" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -630,7 +630,7 @@ function StaysEnhancedPanel({
               <div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-primary">Top Performer #{index + 1}</div>
                 <div className="text-sm font-black text-pearl mt-1">{stay.name}</div>
-                <div className="text-[11px] text-mist mt-1">📍 {stay.location}</div>
+                <div className="text-[11px] text-mist mt-1">Ã°Å¸â€œÂ {stay.location}</div>
               </div>
               <Badge className="bg-sapphire/15 text-sapphire border border-sapphire/20">{views.toLocaleString()} views</Badge>
             </div>
@@ -686,7 +686,7 @@ function StaysEnhancedPanel({
           price: formatPrice(s.price_per_night, s.currency) + '/nt',
           status: s.status,
           createdAt: s.created_at,
-          providerLabel: `${s.stars || 0}★ · ${s.max_guests || 0} guests · ${getViews(s).toLocaleString()} views`,
+          providerLabel: `${s.stars || 0}Ã¢Ëœâ€¦ Ã‚Â· ${s.max_guests || 0} guests Ã‚Â· ${getViews(s).toLocaleString()} views`,
         }))}
         onStatusChange={onStatusChange}
         onDelete={onDelete}
@@ -738,10 +738,10 @@ function EventsEnhancedPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InsightCard label="Total Events" value={events.length} icon="🎭" />
-        <InsightCard label="Upcoming" value={sortedUpcoming.length} icon="📅" />
-        <InsightCard label="Revenue" value={`Rs. ${revenue.toLocaleString()}`} icon="💰" />
-        <InsightCard label="Avg Attendance" value={avgAttendance} icon="👥" />
+        <InsightCard label="Total Events" value={events.length} icon="Ã°Å¸Å½Â­" />
+        <InsightCard label="Upcoming" value={sortedUpcoming.length} icon="Ã°Å¸â€œâ€¦" />
+        <InsightCard label="Revenue" value={`Rs. ${revenue.toLocaleString()}`} icon="Ã°Å¸â€™Â°" />
+        <InsightCard label="Avg Attendance" value={avgAttendance} icon="Ã°Å¸â€˜Â¥" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -752,7 +752,7 @@ function EventsEnhancedPanel({
               <div key={e.id} className="rounded-xl border border-white/5 bg-white/[0.02] p-3 flex items-center justify-between">
                 <div>
                   <div className="text-sm font-black text-pearl">{e.title}</div>
-                  <div className="text-[11px] text-mist">{new Date(e.date).toLocaleDateString()} · {e.venue}</div>
+                  <div className="text-[11px] text-mist">{new Date(e.date).toLocaleDateString()} Ã‚Â· {e.venue}</div>
                 </div>
                 <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">{e.tickets_sold || 0} sold</Badge>
               </div>
@@ -819,7 +819,7 @@ function EventsEnhancedPanel({
           return (
             <div key={e.id} className="rounded-2xl bg-white/5 border border-white/10 p-4 hover:border-primary/40 transition-all">
               <div className="text-sm font-black text-pearl">{e.title}</div>
-              <div className="text-[11px] text-mist mt-1">{new Date(e.date).toLocaleDateString()} · {e.venue}</div>
+              <div className="text-[11px] text-mist mt-1">{new Date(e.date).toLocaleDateString()} Ã‚Â· {e.venue}</div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
                 <div className="bg-white/[0.03] rounded-lg p-2 border border-white/5"><div className="text-mist">Tickets</div><div className="text-pearl font-black">{e.tickets_sold || 0}</div></div>
                 <div className="bg-white/[0.03] rounded-lg p-2 border border-white/5"><div className="text-mist">Price</div><div className="text-pearl font-black">{formatPrice(basePrice, 'LKR')}</div></div>
@@ -847,7 +847,7 @@ function EventsEnhancedPanel({
           price: formatPrice((Object.values(e.prices)[0] as number) || 0, 'LKR'),
           status: e.status,
           createdAt: e.created_at,
-          providerLabel: `${e.category} · sold ${e.tickets_sold || 0}`,
+          providerLabel: `${e.category} Ã‚Â· sold ${e.tickets_sold || 0}`,
         }))}
         onStatusChange={onStatusChange}
         onDelete={onDelete}
@@ -899,10 +899,10 @@ function PropertiesEnhancedPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InsightCard label="Total Properties" value={properties.length} icon="🏡" />
-        <InsightCard label="Sale" value={forSale} icon="🏷️" />
-        <InsightCard label="Rent" value={forRent} icon="🔑" />
-        <InsightCard label="Avg Value" value={`Rs. ${avgPrice.toLocaleString()}`} icon="📈" />
+        <InsightCard label="Total Properties" value={properties.length} icon="Ã°Å¸ÂÂ¡" />
+        <InsightCard label="Sale" value={forSale} icon="Ã°Å¸ÂÂ·Ã¯Â¸Â" />
+        <InsightCard label="Rent" value={forRent} icon="Ã°Å¸â€â€˜" />
+        <InsightCard label="Avg Value" value={`Rs. ${avgPrice.toLocaleString()}`} icon="Ã°Å¸â€œË†" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -981,7 +981,7 @@ function PropertiesEnhancedPanel({
           price: formatPrice(p.price, p.currency),
           status: p.status,
           createdAt: p.listed,
-          providerLabel: `${p.listing_type.toUpperCase()} · ${p.property_type}`,
+          providerLabel: `${p.listing_type.toUpperCase()} Ã‚Â· ${p.property_type}`,
         }))}
         onStatusChange={onStatusChange}
         onDelete={onDelete}
@@ -1035,10 +1035,10 @@ function SocialEnhancedPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InsightCard label="Total Posts" value={posts.length} icon="🌏" />
-        <InsightCard label="Total Likes" value={likes} icon="❤️" />
-        <InsightCard label="Comments" value={comments} icon="💬" />
-        <InsightCard label="Flagged" value={flagged} icon="🚩" />
+        <InsightCard label="Total Posts" value={posts.length} icon="Ã°Å¸Å’Â" />
+        <InsightCard label="Total Likes" value={likes} icon="Ã¢ÂÂ¤Ã¯Â¸Â" />
+        <InsightCard label="Comments" value={comments} icon="Ã°Å¸â€™Â¬" />
+        <InsightCard label="Flagged" value={flagged} icon="Ã°Å¸Å¡Â©" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1048,7 +1048,7 @@ function SocialEnhancedPanel({
             {trending.map((p, idx) => (
               <div key={p.id} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2">
                 <div className="text-sm font-black text-pearl">#{idx + 1} {p.content.slice(0, 48)}...</div>
-                <div className="text-[11px] text-mist mt-1">❤️ {p.likes || 0} · 💬 {p.comments_count || 0}</div>
+                <div className="text-[11px] text-mist mt-1">Ã¢ÂÂ¤Ã¯Â¸Â {p.likes || 0} Ã‚Â· Ã°Å¸â€™Â¬ {p.comments_count || 0}</div>
               </div>
             ))}
           </div>
@@ -1133,7 +1133,7 @@ function SocialEnhancedPanel({
           location: p.location || 'Unknown',
           status: p.status,
           createdAt: p.created_at,
-          providerLabel: `likes ${p.likes || 0} · comments ${p.comments_count || 0}`,
+          providerLabel: `likes ${p.likes || 0} Ã‚Â· comments ${p.comments_count || 0}`,
         }))}
         onStatusChange={onStatusChange}
         onDelete={onDelete}
@@ -1186,10 +1186,10 @@ function SmeEnhancedPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <InsightCard label="Total SMEs" value={businesses.length} icon="🛍️" />
-        <InsightCard label="Active" value={active} icon="📦" />
-        <InsightCard label="Pending" value={pending} icon="⏳" />
-        <InsightCard label="Monthly Revenue" value={`Rs. ${monthlyRevenueTotal.toLocaleString()}`} icon="💵" />
+        <InsightCard label="Total SMEs" value={businesses.length} icon="Ã°Å¸â€ºÂÃ¯Â¸Â" />
+        <InsightCard label="Active" value={active} icon="Ã°Å¸â€œÂ¦" />
+        <InsightCard label="Pending" value={pending} icon="Ã¢ÂÂ³" />
+        <InsightCard label="Monthly Revenue" value={`Rs. ${monthlyRevenueTotal.toLocaleString()}`} icon="Ã°Å¸â€™Âµ" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1200,7 +1200,7 @@ function SmeEnhancedPanel({
               <div key={b.id} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2 flex items-center justify-between">
                 <div>
                   <div className="text-sm font-black text-pearl">#{idx + 1} {b.business_name}</div>
-                  <div className="text-[11px] text-mist">{b.category} · {b.location}</div>
+                  <div className="text-[11px] text-mist">{b.category} Ã‚Â· {b.location}</div>
                 </div>
                 <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">Rs. {estimateMonthlyRevenue(b).toLocaleString()}/mo</Badge>
               </div>
@@ -1257,7 +1257,7 @@ function SmeEnhancedPanel({
               <div className="text-sm font-black text-pearl">{b.business_name}</div>
               <StatusBadge status={b.status} />
             </div>
-            <div className="text-[11px] text-mist mt-1">{b.category} · {b.location}</div>
+            <div className="text-[11px] text-mist mt-1">{b.category} Ã‚Â· {b.location}</div>
             <div className="mt-3 text-[11px] text-mist">Revenue: <span className="text-pearl font-black">Rs. {estimateMonthlyRevenue(b).toLocaleString()}/mo</span></div>
             <div className="text-[11px] text-mist">Verified: <span className="text-pearl font-black">{b.verified ? 'Yes' : 'No'}</span></div>
           </div>
@@ -1280,7 +1280,7 @@ function SmeEnhancedPanel({
           location: b.location,
           status: b.status,
           createdAt: b.created_at,
-          providerLabel: `${b.category} · ${b.verified ? 'verified' : 'unverified'} · Rs. ${estimateMonthlyRevenue(b).toLocaleString()}/mo`,
+          providerLabel: `${b.category} Ã‚Â· ${b.verified ? 'verified' : 'unverified'} Ã‚Â· Rs. ${estimateMonthlyRevenue(b).toLocaleString()}/mo`,
         }))}
         onStatusChange={onStatusChange}
         onDelete={onDelete}
@@ -1289,16 +1289,16 @@ function SmeEnhancedPanel({
   );
 }
 
-// ── Ops Dashboard ──────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Ops Dashboard Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function OpsDashboard() {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Total Revenue', value: 'Rs. 450K', icon: '💰' },
-          { label: 'Total Rides', value: '1,240', icon: '🚕' },
-          { label: 'Drivers Online', value: '85', icon: '🟢' },
-          { label: 'Pending KYC', value: '12', icon: '📄' },
+          { label: 'Total Revenue', value: 'Rs. 450K', icon: 'Ã°Å¸â€™Â°' },
+          { label: 'Total Rides', value: '1,240', icon: 'Ã°Å¸Å¡â€¢' },
+          { label: 'Drivers Online', value: '85', icon: 'Ã°Å¸Å¸Â¢' },
+          { label: 'Pending KYC', value: '12', icon: 'Ã°Å¸â€œâ€ž' },
         ].map((stat) => (
           <div key={stat.label} className="bg-white/5 rounded-2xl border border-white/10 p-6 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">{stat.icon}</div>
@@ -1313,7 +1313,7 @@ function OpsDashboard() {
   );
 }
 
-// ── Supabase Settings Panel ────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Supabase Settings Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 type PlatformCfg = {
   key: string;
   value: unknown;
@@ -1533,11 +1533,11 @@ function SupabaseSettingsPanel() {
         </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <InsightCard label="Baseline Coverage" value={`${coveragePct}%`} icon="📊" />
-          <InsightCard label="Missing Baseline" value={baselineMissing.length} icon="🧩" />
-          <InsightCard label="Guardrail Alerts" value={riskyConfigs.length} icon="⚠️" />
-          <InsightCard label="Recommended Missing" value={nextMissing.length} icon="🚀" />
-          <InsightCard label="Total Configs" value={configs.length} icon="⚙️" />
+          <InsightCard label="Baseline Coverage" value={`${coveragePct}%`} icon="Ã°Å¸â€œÅ " />
+          <InsightCard label="Missing Baseline" value={baselineMissing.length} icon="Ã°Å¸Â§Â©" />
+          <InsightCard label="Guardrail Alerts" value={riskyConfigs.length} icon="Ã¢Å¡Â Ã¯Â¸Â" />
+          <InsightCard label="Recommended Missing" value={nextMissing.length} icon="Ã°Å¸Å¡â‚¬" />
+          <InsightCard label="Total Configs" value={configs.length} icon="Ã¢Å¡â„¢Ã¯Â¸Â" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
@@ -1548,7 +1548,7 @@ function SupabaseSettingsPanel() {
             ) : (
               <div className="space-y-2">
                 {baselineMissing.slice(0, 8).map((m) => (
-                  <div key={m.key} className="text-[11px] text-mist">• {m.key}</div>
+                  <div key={m.key} className="text-[11px] text-mist">Ã¢â‚¬Â¢ {m.key}</div>
                 ))}
               </div>
             )}
@@ -1568,7 +1568,7 @@ function SupabaseSettingsPanel() {
             ) : (
               <div className="space-y-2">
                 {nextMissing.map((m) => (
-                  <div key={m.key} className="text-[11px] text-mist">• {m.key}</div>
+                  <div key={m.key} className="text-[11px] text-mist">Ã¢â‚¬Â¢ {m.key}</div>
                 ))}
               </div>
             )}
@@ -1615,7 +1615,7 @@ function SupabaseSettingsPanel() {
             ) : (
               <div className="space-y-2">
                 {riskyConfigs.map((r) => (
-                  <div key={r.key} className="text-[11px] text-amber-500">• {r.key} is outside expected range</div>
+                  <div key={r.key} className="text-[11px] text-amber-500">Ã¢â‚¬Â¢ {r.key} is outside expected range</div>
                 ))}
               </div>
             )}
@@ -1692,7 +1692,7 @@ function SupabaseSettingsPanel() {
         )}
 
         <div className="mt-12 p-6 bg-primary/10 border border-primary/20 rounded-3xl flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xl border border-primary/20 animate-pulse">⚡</div>
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xl border border-primary/20 animate-pulse">Ã¢Å¡Â¡</div>
           <p className="text-xs text-mist font-bold uppercase tracking-widest">Changes are applied immediately across the platform.</p>
         </div>
       </div>
@@ -1700,7 +1700,7 @@ function SupabaseSettingsPanel() {
   );
 }
 
-// ── Advanced Vehicle Manager Component ─────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Advanced Vehicle Manager Component Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 type FleetVehicle = {
   id: number;
   title: string;
@@ -1807,10 +1807,10 @@ function AdvancedVehicleManager() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Total Vehicles', value: stats.total, icon: '🚕', color: 'text-sapphire-500 bg-sapphire-500/10' },
-          { label: 'Active Fleet', value: stats.active, icon: '✅', color: 'text-emerald-500 bg-emerald-500/10' },
-          { label: 'Available Now', value: stats.available, icon: '🟢', color: 'text-lime-500 bg-lime-500/10' },
-          { label: 'In Maintenance', value: stats.maintenance, icon: '🔧', color: 'text-amber-500 bg-amber-500/10' },
+          { label: 'Total Vehicles', value: stats.total, icon: 'Ã°Å¸Å¡â€¢', color: 'text-sapphire-500 bg-sapphire-500/10' },
+          { label: 'Active Fleet', value: stats.active, icon: 'Ã¢Å“â€¦', color: 'text-emerald-500 bg-emerald-500/10' },
+          { label: 'Available Now', value: stats.available, icon: 'Ã°Å¸Å¸Â¢', color: 'text-lime-500 bg-lime-500/10' },
+          { label: 'In Maintenance', value: stats.maintenance, icon: 'Ã°Å¸â€Â§', color: 'text-amber-500 bg-amber-500/10' },
         ].map((stat) => (
           <div key={stat.label} className={`rounded-2xl p-6 border border-white/10 group hover:border-white/20 transition-all ${stat.color}`}>
             <div className="text-3xl mb-2">{stat.icon}</div>
@@ -1887,7 +1887,7 @@ function AdvancedVehicleManager() {
             }}
             className="bg-primary hover:bg-gold-light text-white font-black h-10 px-6 rounded-xl flex items-center gap-2"
           >
-            ➕ Add Vehicle
+            Ã¢Å¾â€¢ Add Vehicle
           </Button>
         </div>
 
@@ -1895,7 +1895,7 @@ function AdvancedVehicleManager() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <input
             type="text"
-            placeholder="🔍 Search vehicles..."
+            placeholder="Ã°Å¸â€Â Search vehicles..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-mist/40 focus:ring-1 focus:ring-primary/40 focus:outline-none"
@@ -2009,7 +2009,7 @@ function AdvancedVehicleManager() {
                 bulkEditMode ? 'bg-amber-500 text-white' : 'bg-white/10 text-mist hover:bg-white/20'
               }`}
             >
-              {bulkEditMode ? '✓ Bulk Edit' : '⚙️ Bulk Update'}
+              {bulkEditMode ? 'Ã¢Å“â€œ Bulk Edit' : 'Ã¢Å¡â„¢Ã¯Â¸Â Bulk Update'}
             </Button>
             <Button
               onClick={() => {
@@ -2018,7 +2018,7 @@ function AdvancedVehicleManager() {
               }}
               className="bg-primary hover:bg-gold-light text-white font-black h-10 px-6 rounded-xl"
             >
-              ➕ New Rate
+              Ã¢Å¾â€¢ New Rate
             </Button>
           </div>
         </div>
@@ -2266,9 +2266,9 @@ function AdvancedVehicleManager() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GOD'S VIEW PANEL — Live provider & ride tracker
-// ─────────────────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// GOD'S VIEW PANEL Ã¢â‚¬â€ Live provider & ride tracker
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function GodsViewPanel() {
   const [providers, setProviders] = useState<any[]>([]);
   const [rides, setRides] = useState<any[]>([]);
@@ -2280,10 +2280,10 @@ function GodsViewPanel() {
     const load = async () => {
       setLoading(true);
       const [provRes, rideRes, bkRes, revRes] = await Promise.all([
-        supabase.rpc('admin_gods_view_providers' as any),
-        supabase.rpc('admin_gods_view_rides' as any),
-        supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('bookings').select('total_price').gte('created_at', new Date().toISOString().slice(0, 10)),
+        db.rpc('admin_gods_view_providers'),
+        db.rpc('admin_gods_view_rides'),
+        db.from('bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        db.from('bookings').select('total_price').gte('created_at', new Date().toISOString().slice(0, 10)),
       ]);
       setProviders((provRes.data as any[]) || []);
       setRides((rideRes.data as any[]) || []);
@@ -2319,10 +2319,10 @@ function GodsViewPanel() {
       {/* KPI Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Active Rides', value: stats.activeRides, icon: '🚖', color: 'text-amber-400' },
-          { label: 'Online Providers', value: stats.onlineProviders, icon: '🟢', color: 'text-emerald-400' },
-          { label: 'Pending Bookings', value: stats.pendingBookings, icon: '⏳', color: 'text-primary' },
-          { label: "Today's Revenue", value: `LKR ${stats.todayRevenue.toLocaleString()}`, icon: '💰', color: 'text-gold' },
+          { label: 'Active Rides', value: stats.activeRides, icon: 'Ã°Å¸Å¡â€“', color: 'text-amber-400' },
+          { label: 'Online Providers', value: stats.onlineProviders, icon: 'Ã°Å¸Å¸Â¢', color: 'text-emerald-400' },
+          { label: 'Pending Bookings', value: stats.pendingBookings, icon: 'Ã¢ÂÂ³', color: 'text-primary' },
+          { label: "Today's Revenue", value: `LKR ${stats.todayRevenue.toLocaleString()}`, icon: 'Ã°Å¸â€™Â°', color: 'text-gold' },
         ].map(k => (
           <div key={k.label} className="bg-white/5 rounded-2xl border border-white/10 p-5">
             <p className="text-2xl mb-1">{k.icon}</p>
@@ -2342,10 +2342,10 @@ function GodsViewPanel() {
         ))}
       </div>
 
-      {/* Map Container — styled provider dots on Sri Lanka grid */}
+      {/* Map Container Ã¢â‚¬â€ styled provider dots on Sri Lanka grid */}
       <div className="bg-white/5 rounded-3xl border border-white/10 p-6 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-black text-white uppercase tracking-widest">Live Provider Map — Sri Lanka</h3>
+          <h3 className="text-sm font-black text-white uppercase tracking-widest">Live Provider Map Ã¢â‚¬â€ Sri Lanka</h3>
           <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> LIVE
           </span>
@@ -2364,10 +2364,10 @@ function GodsViewPanel() {
               </svg>
             </div>
             {/* Province labels */}
-            <div className="absolute top-4 left-4 text-[8px] text-mist/30 font-bold">N • Jaffna</div>
-            <div className="absolute bottom-4 right-4 text-[8px] text-mist/30 font-bold">S • Galle</div>
-            <div className="absolute top-1/2 left-6 text-[8px] text-mist/30 font-bold">W • Colombo</div>
-            <div className="absolute top-1/2 right-6 text-[8px] text-mist/30 font-bold">E • Batticaloa</div>
+            <div className="absolute top-4 left-4 text-[8px] text-mist/30 font-bold">N Ã¢â‚¬Â¢ Jaffna</div>
+            <div className="absolute bottom-4 right-4 text-[8px] text-mist/30 font-bold">S Ã¢â‚¬Â¢ Galle</div>
+            <div className="absolute top-1/2 left-6 text-[8px] text-mist/30 font-bold">W Ã¢â‚¬Â¢ Colombo</div>
+            <div className="absolute top-1/2 right-6 text-[8px] text-mist/30 font-bold">E Ã¢â‚¬Â¢ Batticaloa</div>
             <div className="absolute top-1/3 left-1/2 text-[8px] text-mist/30 font-bold -translate-x-1/2">Kandy</div>
 
             {/* Provider dots */}
@@ -2378,7 +2378,7 @@ function GodsViewPanel() {
               const y = (1 - (lat - 5.9) / 3.4) * 100;
               const color = verticalColor[p.vertical] || 'bg-white';
               return (
-                <div key={p.id || i} title={`${p.name} — ${p.vertical}`}
+                <div key={p.id || i} title={`${p.name} Ã¢â‚¬â€ ${p.vertical}`}
                   className={`absolute w-3 h-3 rounded-full ${color} border-2 border-zinc-950 shadow-lg cursor-pointer hover:scale-150 transition-transform z-10`}
                   style={{ left: `${Math.min(95, Math.max(5, x))}%`, top: `${Math.min(95, Math.max(5, y))}%` }}
                 />
@@ -2434,11 +2434,11 @@ function GodsViewPanel() {
                     <td className="py-3 font-bold text-white">{p.name || p.full_name || 'Provider'}</td>
                     <td className="py-3">
                       <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${verticalColor[p.vertical] || 'bg-white/10'} text-white`}>
-                        {p.vertical || '—'}
+                        {p.vertical || 'Ã¢â‚¬â€'}
                       </span>
                     </td>
                     <td className="py-3 text-mist">{p.city || `${(p.last_lat || '?')} / ${(p.last_lng || '?')}`}</td>
-                    <td className="py-3 text-right text-mist">{p.last_seen ? new Date(p.last_seen).toLocaleTimeString() : '—'}</td>
+                    <td className="py-3 text-right text-mist">{p.last_seen ? new Date(p.last_seen).toLocaleTimeString() : 'Ã¢â‚¬â€'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2450,9 +2450,9 @@ function GodsViewPanel() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FINANCE PANEL — Revenue, Payouts, Top Earners
-// ─────────────────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// FINANCE PANEL Ã¢â‚¬â€ Revenue, Payouts, Top Earners
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function FinancePanel() {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [revenueByVertical, setRevenueByVertical] = useState<any[]>([]);
@@ -2469,9 +2469,9 @@ function FinancePanel() {
       const since = new Date(Date.now() - days * 86400000).toISOString();
 
       const [revRes, payRes, earnerRes] = await Promise.all([
-        supabase.rpc('admin_revenue_by_vertical' as any, { since_date: since }),
-        supabase.from('payouts' as any).select('*, profiles(full_name, avatar_url)').order('created_at', { ascending: false }).limit(30),
-        supabase.from('bookings').select('provider_id, total_price, profiles!provider_id(full_name)')
+        db.rpc('admin_revenue_by_vertical', { since_date: since }),
+        db.from('payouts').select('*, profiles(full_name, avatar_url)').order('created_at', { ascending: false }).limit(30),
+        db.from('bookings').select('provider_id, total_price, profiles!provider_id(full_name)')
           .gte('created_at', since).eq('status', 'confirmed'),
       ]);
 
@@ -2500,7 +2500,7 @@ function FinancePanel() {
 
   const processPayout = async (payoutId: string) => {
     setProcessingId(payoutId);
-    await supabase.from('payouts' as any).update({ status: 'processing', processed_at: new Date().toISOString() }).eq('id', payoutId);
+    await db.from('payouts').update({ status: 'processing', processed_at: new Date().toISOString() }).eq('id', payoutId);
     setPayouts(p => p.map((x: any) => x.id === payoutId ? { ...x, status: 'processing' } : x));
     setProcessingId(null);
   };
@@ -2604,7 +2604,7 @@ function FinancePanel() {
               <tbody className="divide-y divide-white/5">
                 {payouts.map((py: any) => (
                   <tr key={py.id} className="hover:bg-white/3 transition-all">
-                    <td className="py-3 font-bold text-white">{(py.profiles as any)?.full_name || '—'}</td>
+                    <td className="py-3 font-bold text-white">{(py.profiles as any)?.full_name || 'Ã¢â‚¬â€'}</td>
                     <td className="py-3 text-gold font-black">LKR {(py.amount || 0).toLocaleString()}</td>
                     <td className="py-3 text-mist uppercase">{py.method || 'bank'}</td>
                     <td className="py-3">
@@ -2636,9 +2636,9 @@ function FinancePanel() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COUPONS PANEL — Promo code management
-// ─────────────────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// COUPONS PANEL Ã¢â‚¬â€ Promo code management
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function CouponsPanel() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2654,20 +2654,20 @@ function CouponsPanel() {
 
   const loadCoupons = async () => {
     setLoading(true);
-    const { data } = await supabase.from('coupons' as any).select('*, coupon_usages(count)').order('created_at', { ascending: false });
+    const { data } = await db.from('coupons').select('*, coupon_usages(count)').order('created_at', { ascending: false });
     setCoupons((data as any[]) || []);
     setLoading(false);
   };
 
   const toggleCoupon = async (id: string, isActive: boolean) => {
-    await supabase.from('coupons' as any).update({ is_active: !isActive }).eq('id', id);
+    await db.from('coupons').update({ is_active: !isActive }).eq('id', id);
     setCoupons(cs => cs.map((c: any) => c.id === id ? { ...c, is_active: !isActive } : c));
   };
 
   const createCoupon = async () => {
     if (!form.code || !form.discount_value) return;
     setSaving(true);
-    const { error } = await supabase.from('coupons' as any).insert({
+    const { error } = await db.from('coupons').insert({
       code: form.code.toUpperCase(),
       discount_type: form.discount_type,
       discount_value: parseFloat(form.discount_value),
@@ -2695,7 +2695,7 @@ function CouponsPanel() {
         <h3 className="text-sm font-black text-white uppercase tracking-widest">Coupon & Promo Codes</h3>
         <button onClick={() => setShowForm(v => !v)}
           className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all">
-          {showForm ? '✕ Cancel' : '+ New Coupon'}
+          {showForm ? 'Ã¢Å“â€¢ Cancel' : '+ New Coupon'}
         </button>
       </div>
 
@@ -2821,7 +2821,7 @@ function CouponsPanel() {
                         </div>
                       </td>
                       <td className="py-3 text-mist">
-                        {c.valid_until ? new Date(c.valid_until).toLocaleDateString() : '∞'}
+                        {c.valid_until ? new Date(c.valid_until).toLocaleDateString() : 'Ã¢Ë†Å¾'}
                       </td>
                       <td className="py-3">
                         {c.applicable_verticals?.length > 0 ? (
@@ -2850,9 +2850,9 @@ function CouponsPanel() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// USERS PANEL 360° — Customer & Provider deep-dive
-// ─────────────────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// USERS PANEL 360Ã‚Â° Ã¢â‚¬â€ Customer & Provider deep-dive
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function UsersPanel360() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'customer' | 'provider' | 'admin'>('all');
@@ -2880,9 +2880,9 @@ function UsersPanel360() {
     setSelected(user);
     setDetailLoading(true);
     const [bkRes, txRes, listRes] = await Promise.all([
-      supabase.from('bookings').select('id, vertical, status, total_price, created_at').or(`customer_id.eq.${user.id},provider_id.eq.${user.id}`).order('created_at', { ascending: false }).limit(20),
-      supabase.from('wallet_transactions' as any).select('id, type, amount, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-      supabase.from('listings').select('id, title, vertical, status').eq('provider_id', user.id).limit(10),
+      db.from('bookings').select('id, vertical, status, total_price, created_at').or(`customer_id.eq.${user.id},provider_id.eq.${user.id}`).order('created_at', { ascending: false }).limit(20),
+      db.from('wallet_transactions').select('id, type, amount, description, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+      db.from('listings').select('id, title, vertical, status').eq('provider_id', user.id).limit(10),
     ]);
     setDetail({
       bookings: (bkRes.data as any[]) || [],
@@ -2901,7 +2901,7 @@ function UsersPanel360() {
       await supabase.from('profiles').update({ kyc_status: 'verified' }).eq('id', userId);
       setSelected((u: any) => u ? { ...u, kyc_status: 'verified' } : u);
     } else if (action === 'notify') {
-      await supabase.from('notifications' as any).insert({ user_id: userId, type: 'admin', title: 'Message from Admin', body: 'You have a message from the Pearl Hub team.', read: false });
+      await db.from('notifications').insert({ user_id: userId, type: 'admin', title: 'Message from Admin', body: 'You have a message from the Pearl Hub team.', read: false });
     }
     setActionLoading('');
   };
@@ -2910,7 +2910,7 @@ function UsersPanel360() {
     <div className="flex gap-6 h-[calc(100vh-250px)] min-h-[600px]">
       {/* User List */}
       <div className="w-80 shrink-0 flex flex-col gap-4">
-        <input type="text" placeholder="Search users…" value={search}
+        <input type="text" placeholder="Search usersÃ¢â‚¬Â¦" value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-primary/50"
         />
@@ -2946,7 +2946,7 @@ function UsersPanel360() {
                       'bg-sapphire/20 text-sapphire'
                     }`}>{u.role}</span>
                     {u.is_suspended && <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-ruby/20 text-ruby">Suspended</span>}
-                    {u.kyc_status === 'verified' && <span className="text-emerald-400 text-[10px]">✓</span>}
+                    {u.kyc_status === 'verified' && <span className="text-emerald-400 text-[10px]">Ã¢Å“â€œ</span>}
                   </div>
                 </div>
               </div>
@@ -2959,7 +2959,7 @@ function UsersPanel360() {
       <div className="flex-1 overflow-y-auto">
         {!selected ? (
           <div className="h-full flex items-center justify-center">
-            <p className="text-mist/40 text-sm font-bold">Select a user to view 360° profile</p>
+            <p className="text-mist/40 text-sm font-bold">Select a user to view 360Ã‚Â° profile</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -2997,7 +2997,7 @@ function UsersPanel360() {
                     <p className="text-[10px] text-mist font-bold uppercase">Pearl Points</p>
                   </div>
                   <div className="text-center px-4 py-2 rounded-xl bg-white/5">
-                    <p className="text-lg font-black text-mist">{selected.referral_code || '—'}</p>
+                    <p className="text-lg font-black text-mist">{selected.referral_code || 'Ã¢â‚¬â€'}</p>
                     <p className="text-[10px] text-mist font-bold uppercase">Referral Code</p>
                   </div>
                 </div>

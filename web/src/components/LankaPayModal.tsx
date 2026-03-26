@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,7 +23,7 @@ const LankaPayModal = ({ open, onClose, amount, description, onSuccess }: LankaP
       // Record wallet transaction in Supabase
       // In production this is confirmed by a server-side webhook
       if (user) {
-        await (supabase as any).from("wallet_transactions").insert({
+        await db.from("wallet_transactions").insert({
           user_id: user.id,
           type: "deposit",
           amount,
@@ -57,13 +57,13 @@ const LankaPayModal = ({ open, onClose, amount, description, onSuccess }: LankaP
           {/* Header */}
           <div className="bg-gradient-to-r from-sapphire to-emerald px-6 py-5 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">🏦</div>
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">ðŸ¦</div>
               <div>
                 <h3 className="text-pearl font-bold text-lg">LankaPay</h3>
                 <p className="text-pearl/70 text-xs">Secure Payment Gateway</p>
               </div>
             </div>
-            <button onClick={onClose} className="bg-white/15 border-none text-pearl w-8 h-8 rounded-full cursor-pointer text-sm">✕</button>
+            <button onClick={onClose} className="bg-white/15 border-none text-pearl w-8 h-8 rounded-full cursor-pointer text-sm">âœ•</button>
           </div>
 
           <div className="p-6">
@@ -81,9 +81,9 @@ const LankaPayModal = ({ open, onClose, amount, description, onSuccess }: LankaP
                   <label className="block text-xs font-semibold mb-2">Payment Method</label>
                   <div className="grid grid-cols-3 gap-2">
                     {([
-                      { id: "card", icon: "💳", label: "Card" },
-                      { id: "bank", icon: "🏦", label: "Bank Transfer" },
-                      { id: "mobile", icon: "📱", label: "Mobile Pay" },
+                      { id: "card", icon: "ðŸ’³", label: "Card" },
+                      { id: "bank", icon: "ðŸ¦", label: "Bank Transfer" },
+                      { id: "mobile", icon: "ðŸ“±", label: "Mobile Pay" },
                     ] as const).map(m => (
                       <div key={m.id} onClick={() => setMethod(m.id)}
                         className={`p-3 border-2 rounded-lg text-center cursor-pointer transition-all ${method === m.id ? "border-emerald bg-emerald/5" : "border-border"}`}>
@@ -124,19 +124,19 @@ const LankaPayModal = ({ open, onClose, amount, description, onSuccess }: LankaP
                 )}
 
                 <div className="text-[11px] text-muted-foreground mb-4 flex items-center gap-1.5">
-                  🔒 Secured by LankaPay — SSL encrypted. PCI-DSS compliant.
+                  ðŸ”’ Secured by LankaPay â€” SSL encrypted. PCI-DSS compliant.
                 </div>
 
                 <button onClick={handlePay}
                   className="w-full bg-emerald hover:bg-emerald-light text-accent-foreground py-3 rounded-lg font-bold transition-all">
-                  💳 Pay Rs. {amount.toLocaleString()}
+                  ðŸ’³ Pay Rs. {amount.toLocaleString()}
                 </button>
               </>
             )}
 
             {step === "processing" && (
               <div className="text-center py-10">
-                <div className="text-5xl mb-4 animate-spin-slow">⏳</div>
+                <div className="text-5xl mb-4 animate-spin-slow">â³</div>
                 <h3 className="text-lg font-bold mb-2">Processing Payment...</h3>
                 <p className="text-sm text-muted-foreground">Please wait while we verify your payment with LankaPay.</p>
               </div>
@@ -144,7 +144,7 @@ const LankaPayModal = ({ open, onClose, amount, description, onSuccess }: LankaP
 
             {step === "success" && (
               <div className="text-center py-8">
-                <div className="text-5xl mb-4">✅</div>
+                <div className="text-5xl mb-4">âœ…</div>
                 <h3 className="text-lg font-bold mb-2 text-emerald">Payment Successful!</h3>
                 <p className="text-sm text-muted-foreground mb-2">Transaction ID: LP-{Date.now().toString(36).toUpperCase()}</p>
                 <p className="text-xs text-muted-foreground mb-6">Receipt sent to your registered email.</p>

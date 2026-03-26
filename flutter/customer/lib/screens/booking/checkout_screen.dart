@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pearlhub_shared/services/auth_service.dart';
+import '../../services/auth_service.dart';
 
 // Fetches just the pricing fields for a listing by type
 final _listingPricingProvider = FutureProvider.family<Map<String, dynamic>?, (String, String)>((ref, args) async {

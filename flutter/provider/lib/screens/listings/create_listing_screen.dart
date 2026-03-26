@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pearlhub_shared/services/auth_service.dart';
-import 'package:pearlhub_shared/models/user_profile.dart';
+import '../../services/auth_service.dart';
+import '../../models/user_profile.dart';
 import 'dart:io';
 
 class CreateListingScreen extends ConsumerStatefulWidget {

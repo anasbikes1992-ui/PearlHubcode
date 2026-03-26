@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, db } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,8 @@ const ReviewSection = ({ listingId, listingType }: ReviewSectionProps) => {
   useEffect(() => {
     const fetchReviews = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("reviews" as any)
+      const { data } = await db
+        .from("reviews")
         .select("*")
         .eq("listing_id", listingId)
         .eq("listing_type", listingType)
@@ -62,7 +62,7 @@ const ReviewSection = ({ listingId, listingType }: ReviewSectionProps) => {
       setCheckingEligibility(true);
       const [bookingRes, reviewRes] = await Promise.all([
         // Check for a completed booking
-        (supabase as any)
+        db
           .from("bookings")
           .select("id")
           .eq("user_id", user.id)
@@ -70,7 +70,7 @@ const ReviewSection = ({ listingId, listingType }: ReviewSectionProps) => {
           .eq("status", "completed")
           .limit(1),
         // Check if already reviewed
-        (supabase as any)
+        db
           .from("reviews")
           .select("id")
           .eq("user_id", user.id)
@@ -107,7 +107,7 @@ const ReviewSection = ({ listingId, listingType }: ReviewSectionProps) => {
       .eq("id", user.id)
       .single();
 
-    const { error } = await supabase.from("reviews" as any).insert({
+    const { error } = await db.from("reviews").insert({
       listing_id:   listingId,
       listing_type: listingType,
       user_id:      user.id,
@@ -132,8 +132,8 @@ const ReviewSection = ({ listingId, listingType }: ReviewSectionProps) => {
       setRating(5);
       setHasAlreadyReviewed(true);
       // Re-fetch reviews
-      const { data } = await supabase
-        .from("reviews" as any)
+      const { data } = await db
+        .from("reviews")
         .select("*")
         .eq("listing_id", listingId)
         .eq("listing_type", listingType)

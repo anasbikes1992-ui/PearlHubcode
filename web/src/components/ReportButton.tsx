@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -31,7 +31,7 @@ const ReportButton = ({ listingId, listingType, reportedUserId }: ReportButtonPr
     }
 
     setSubmitting(true);
-    const { error } = await (supabase.from('user_reports' as any).insert({
+    const { error } = await db.from('user_reports').insert({
       reporter_id: currentUser.id,
       reported_user_id: reportedUserId,
       listing_id: listingId,
@@ -39,7 +39,7 @@ const ReportButton = ({ listingId, listingType, reportedUserId }: ReportButtonPr
       report_type: reportType,
       description: description.trim(),
       status: 'pending'
-    }) as any);
+    });
 
     setSubmitting(false);
 

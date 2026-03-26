@@ -1,5 +1,5 @@
-/**
- * Pearl Hub — React Query hooks for fetching listings from Supabase.
+﻿/**
+ * Pearl Hub â€” React Query hooks for fetching listings from Supabase.
  *
  * Strategy: Supabase is the source of truth for all listing data.
  * The Zustand store is used only for UI state (favorites, compare, toasts).
@@ -12,9 +12,9 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 
-// ── Query key factory ─────────────────────────────────────
+// â”€â”€ Query key factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const listingKeys = {
   all:        ["listings"]                       as const,
   stays:      (f?: StayFilters)  => ["stays",  f] as const,
@@ -28,7 +28,7 @@ export const listingKeys = {
   bookings:   (uid: string) => ["bookings", uid] as const,
 };
 
-// ── Filter types ──────────────────────────────────────────
+// â”€â”€ Filter types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export interface StayFilters {
   location?: string;
   stay_type?: string;
@@ -56,12 +56,12 @@ export interface PropertyFilters {
   maxPrice?: number;
 }
 
-// ── Stays ─────────────────────────────────────────────────
+// â”€â”€ Stays â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useStays(filters?: StayFilters) {
   return useQuery({
     queryKey: listingKeys.stays(filters),
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = db
         .from("stays_listings")
         .select("*")
         .eq("moderation_status", "approved")
@@ -80,12 +80,12 @@ export function useStays(filters?: StayFilters) {
   });
 }
 
-// ── Vehicles ──────────────────────────────────────────────
+// â”€â”€ Vehicles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useVehicles(filters?: VehicleFilters) {
   return useQuery({
     queryKey: listingKeys.vehicles(filters),
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = db
         .from("vehicles_listings")
         .select("*")
         .eq("moderation_status", "approved")
@@ -105,12 +105,12 @@ export function useVehicles(filters?: VehicleFilters) {
   });
 }
 
-// ── Events ────────────────────────────────────────────────
+// â”€â”€ Events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useEvents(filters?: EventFilters) {
   return useQuery({
     queryKey: listingKeys.events(filters),
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = db
         .from("events_listings")
         .select("*")
         .eq("moderation_status", "approved")
@@ -129,12 +129,12 @@ export function useEvents(filters?: EventFilters) {
   });
 }
 
-// ── Properties ────────────────────────────────────────────
+// â”€â”€ Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useProperties(filters?: PropertyFilters) {
   return useQuery({
     queryKey: listingKeys.properties(filters),
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = db
         .from("properties_listings")
         .select("*")
         .eq("moderation_status", "approved")
@@ -154,13 +154,13 @@ export function useProperties(filters?: PropertyFilters) {
   });
 }
 
-// ── Provider: own listings ────────────────────────────────
+// â”€â”€ Provider: own listings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useProviderStays(userId: string | undefined) {
   return useQuery({
     queryKey: listingKeys.providerStays(userId ?? ""),
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("stays_listings")
         .select("*")
         .eq("user_id", userId)
@@ -177,7 +177,7 @@ export function useProviderVehicles(userId: string | undefined) {
     queryKey: listingKeys.providerVehicles(userId ?? ""),
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("vehicles_listings")
         .select("*")
         .eq("user_id", userId)
@@ -194,7 +194,7 @@ export function useProviderEvents(userId: string | undefined) {
     queryKey: listingKeys.providerEvents(userId ?? ""),
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("events_listings")
         .select("*")
         .eq("user_id", userId)
@@ -211,7 +211,7 @@ export function useProviderProperties(userId: string | undefined) {
     queryKey: listingKeys.providerProperties(userId ?? ""),
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("properties_listings")
         .select("*")
         .eq("user_id", userId)
@@ -223,13 +223,13 @@ export function useProviderProperties(userId: string | undefined) {
   });
 }
 
-// ── User bookings ─────────────────────────────────────────
+// â”€â”€ User bookings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useUserBookings(userId: string | undefined) {
   return useQuery({
     queryKey: listingKeys.bookings(userId ?? ""),
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("bookings")
         .select("*")
         .eq("user_id", userId)
@@ -241,7 +241,7 @@ export function useUserBookings(userId: string | undefined) {
   });
 }
 
-// ── Mutation: invalidate provider listings after create/update/delete ─────
+// â”€â”€ Mutation: invalidate provider listings after create/update/delete â”€â”€â”€â”€â”€
 export function useInvalidateListings() {
   const qc = useQueryClient();
   return () => {
@@ -258,12 +258,12 @@ export function useInvalidateListings() {
   };
 }
 
-// ── Taxi: Vehicle Categories ──────────────────────────────────
+// â”€â”€ Taxi: Vehicle Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useTaxiCategories() {
   return useQuery({
     queryKey: ["taxi-categories"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("taxi_vehicle_categories")
         .select("*")
         .eq("is_active", true)
@@ -275,13 +275,13 @@ export function useTaxiCategories() {
   });
 }
 
-// ── Taxi: Customer Rides ──────────────────────────────────────
+// â”€â”€ Taxi: Customer Rides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useTaxiRides(userId: string | undefined) {
   return useQuery({
     queryKey: ["taxi-rides", userId],
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("taxi_rides")
         .select("*")
         .eq("customer_id", userId)
@@ -293,13 +293,13 @@ export function useTaxiRides(userId: string | undefined) {
   });
 }
 
-// ── Taxi: Provider Active Rides ───────────────────────────────
+// â”€â”€ Taxi: Provider Active Rides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useTaxiProviderRides(providerId: string | undefined) {
   return useQuery({
     queryKey: ["taxi-provider-rides", providerId],
     queryFn: async () => {
       if (!providerId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from("taxi_rides")
         .select("*")
         .eq("provider_id", providerId)
@@ -312,9 +312,9 @@ export function useTaxiProviderRides(providerId: string | undefined) {
   });
 }
 
-// ── Taxi: Validate Promo Code ─────────────────────────────────
+// â”€â”€ Taxi: Validate Promo Code â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function validateTaxiPromo(code: string) {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db
     .from("taxi_promo_codes")
     .select("*")
     .eq("code", code.trim().toUpperCase())
@@ -327,15 +327,15 @@ export async function validateTaxiPromo(code: string) {
   return { valid: true, discount_type: data.discount_type, discount_amount: data.discount_amount, id: data.id };
 }
 
-// ── Taxi: Admin Stats ─────────────────────────────────────────
+// â”€â”€ Taxi: Admin Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function useTaxiAdminStats() {
   return useQuery({
     queryKey: ["taxi-admin-stats"],
     queryFn: async () => {
       const [ridesRes, driversRes, kycRes] = await Promise.all([
-        (supabase as any).from("taxi_rides").select("fare, status", { count: "exact" }),
-        (supabase as any).from("taxi_provider_locations").select("*", { count: "exact" }).eq("is_online", true),
-        (supabase as any).from("taxi_kyc_documents").select("*", { count: "exact" }).eq("verification_status", "pending"),
+        db.from("taxi_rides").select("fare, status", { count: "exact" }),
+        db.from("taxi_provider_locations").select("*", { count: "exact" }).eq("is_online", true),
+        db.from("taxi_kyc_documents").select("*", { count: "exact" }).eq("verification_status", "pending"),
       ]);
       const completed = ridesRes.data?.filter((r: any) => r.status === "completed") || [];
       const revenue = completed.reduce((sum: number, r: any) => sum + (r.fare || 0), 0);

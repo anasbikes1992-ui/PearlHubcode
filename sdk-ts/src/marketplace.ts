@@ -1,5 +1,5 @@
 // src/marketplace.ts - Phase 2 Marketplace API
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface ListingGeospatial {
   id: string;
@@ -58,6 +58,18 @@ export interface SearchResponse<T> {
     offset: number;
     hasNextPage: boolean;
   };
+}
+
+export interface ListingUpdatePayload {
+  eventType: string;
+  new?: ListingGeospatial;
+  old?: ListingGeospatial;
+}
+
+export interface AvailabilityUpdatePayload {
+  eventType: string;
+  new?: AvailabilitySlot;
+  old?: AvailabilitySlot;
 }
 
 export class MarketplaceClient {
@@ -200,14 +212,28 @@ export class MarketplaceClient {
    * @param callback Function called when listings change
    */
   subscribeToListingUpdates(
-    callback: (payload: { eventType: string; new?: ListingGeospatial; old?: ListingGeospatial }) => void
+    callback: (payload: ListingUpdatePayload) => void
   ) {
     return this.supabase
       .channel('listings_changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'listings_geospatial' },
-        (payload) => callback(payload)
+        (payload) => {
+          const mapped: ListingUpdatePayload = {
+            eventType: payload.eventType,
+          };
+
+          if (payload.eventType !== 'DELETE') {
+            mapped.new = payload.new as ListingGeospatial;
+          }
+
+          if (payload.eventType !== 'INSERT') {
+            mapped.old = payload.old as ListingGeospatial;
+          }
+
+          callback(mapped);
+        }
       )
       .subscribe();
   }
@@ -219,7 +245,7 @@ export class MarketplaceClient {
    */
   subscribeToAvailabilityUpdates(
     listingId: string,
-    callback: (payload: { eventType: string; new?: AvailabilitySlot; old?: AvailabilitySlot }) => void
+    callback: (payload: AvailabilityUpdatePayload) => void
   ) {
     return this.supabase
       .channel(`availability_${listingId}`)
@@ -231,7 +257,21 @@ export class MarketplaceClient {
           table: 'availability_slots',
           filter: `listing_id=eq.${listingId}`,
         },
-        (payload) => callback(payload)
+        (payload) => {
+          const mapped: AvailabilityUpdatePayload = {
+            eventType: payload.eventType,
+          };
+
+          if (payload.eventType !== 'DELETE') {
+            mapped.new = payload.new as AvailabilitySlot;
+          }
+
+          if (payload.eventType !== 'INSERT') {
+            mapped.old = payload.old as AvailabilitySlot;
+          }
+
+          callback(mapped);
+        }
       )
       .subscribe();
   }
@@ -242,13 +282,14 @@ export class MarketplaceClient {
    * @returns Object with search and loadMore functions
    */
   infiniteSearch(params: SearchListingsParams) {
+    const client = this;
     const pages: Array<SearchResponse<ListingGeospatial & { distance_km: number }>> = [];
     let currentOffset = 0;
     let hasMore = true;
 
     return {
-      async search() {
-        const result = await this.searchListingsByRadius({
+      async search(): Promise<Array<ListingGeospatial & { distance_km: number }>> {
+        const result = await client.searchListingsByRadius({
           ...params,
           offset: 0,
           limit: params.limit || 20,
@@ -259,10 +300,10 @@ export class MarketplaceClient {
         return result.results;
       },
 
-      async loadMore() {
+      async loadMore(): Promise<Array<ListingGeospatial & { distance_km: number }>> {
         if (!hasMore) return [];
 
-        const result = await this.searchListingsByRadius({
+        const result = await client.searchListingsByRadius({
           ...params,
           offset: currentOffset,
           limit: params.limit || 20,
@@ -274,11 +315,11 @@ export class MarketplaceClient {
         return result.results;
       },
 
-      getAllResults() {
+      getAllResults(): Array<ListingGeospatial & { distance_km: number }> {
         return pages.flatMap((page) => page.results);
       },
 
-      hasMoreResults() {
+      hasMoreResults(): boolean {
         return hasMore;
       },
     };

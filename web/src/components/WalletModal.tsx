@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 
 const MIN_DEPOSIT    = 1000;
 const MAX_DEPOSIT    = 500000;
@@ -52,7 +52,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
 
     try {
       // Write wallet transaction record to Supabase
-      const { error: dbError } = await (supabase as any)
+      const { error: dbError } = await db
         .from("wallet_transactions")
         .insert({
           user_id:     user.id,
@@ -112,7 +112,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
           <div className="bg-gradient-to-r from-emerald to-emerald-light px-6 py-5 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">
-                {type === "deposit" ? "💰" : "💸"}
+                {type === "deposit" ? "ðŸ’°" : "ðŸ’¸"}
               </div>
               <div>
                 <h3 className="text-pearl font-bold text-lg">
@@ -121,7 +121,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
                 <p className="text-pearl/70 text-xs">Secure wallet transaction via LankaPay</p>
               </div>
             </div>
-            <button onClick={() => { reset(); onClose(); }} className="bg-white/15 border-none text-pearl w-8 h-8 rounded-full cursor-pointer text-sm">✕</button>
+            <button onClick={() => { reset(); onClose(); }} className="bg-white/15 border-none text-pearl w-8 h-8 rounded-full cursor-pointer text-sm">âœ•</button>
           </div>
 
           <div className="p-6">
@@ -152,8 +152,8 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     {type === "deposit"
-                      ? `Min: Rs. ${MIN_DEPOSIT.toLocaleString()} · Max: Rs. ${MAX_DEPOSIT.toLocaleString()}`
-                      : `Min: Rs. ${MIN_WITHDRAWAL.toLocaleString()} · Max: Rs. ${MAX_WITHDRAWAL.toLocaleString()} · 1–2 business days`}
+                      ? `Min: Rs. ${MIN_DEPOSIT.toLocaleString()} Â· Max: Rs. ${MAX_DEPOSIT.toLocaleString()}`
+                      : `Min: Rs. ${MIN_WITHDRAWAL.toLocaleString()} Â· Max: Rs. ${MAX_WITHDRAWAL.toLocaleString()} Â· 1â€“2 business days`}
                   </p>
                 </div>
 
@@ -172,11 +172,11 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
                 {type === "withdrawal" && (
                   <div className="bg-amber/10 border border-amber/20 rounded-lg p-4 mb-5">
                     <div className="flex items-start gap-3">
-                      <span className="text-amber text-lg">⚠️</span>
+                      <span className="text-amber text-lg">âš ï¸</span>
                       <div>
                         <div className="text-sm font-semibold text-amber mb-1">Withdrawal Notice</div>
                         <div className="text-xs text-muted-foreground">
-                          Funds will be transferred to your registered bank account within 1–2 business days.
+                          Funds will be transferred to your registered bank account within 1â€“2 business days.
                           A Rs. 250 processing fee applies to withdrawals under Rs. 10,000.
                         </div>
                       </div>
@@ -185,7 +185,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
                 )}
 
                 <div className="text-[11px] text-muted-foreground mb-4 flex items-center gap-1.5">
-                  🔒 Secured by LankaPay — SSL encrypted. Bank-level security.
+                  ðŸ”’ Secured by LankaPay â€” SSL encrypted. Bank-level security.
                 </div>
 
                 <button
@@ -193,7 +193,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
                   disabled={!amount || !user}
                   className="w-full bg-emerald hover:bg-emerald-light text-accent-foreground py-3 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {type === "deposit" ? "💰 Add Funds" : "💸 Withdraw Funds"}
+                  {type === "deposit" ? "ðŸ’° Add Funds" : "ðŸ’¸ Withdraw Funds"}
                 </button>
               </>
             )}
@@ -202,7 +202,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
               <div className="text-center py-10">
                 <div className="w-14 h-14 border-4 border-emerald border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                 <h3 className="text-lg font-bold mb-2">
-                  {type === "deposit" ? "Processing Deposit…" : "Submitting Withdrawal…"}
+                  {type === "deposit" ? "Processing Depositâ€¦" : "Submitting Withdrawalâ€¦"}
                 </h3>
                 <p className="text-sm text-muted-foreground">Please wait, do not close this window.</p>
               </div>
@@ -210,7 +210,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
 
             {step === "success" && (
               <div className="text-center py-8">
-                <div className="text-5xl mb-4">✅</div>
+                <div className="text-5xl mb-4">âœ…</div>
                 <h3 className="text-lg font-bold mb-2 text-emerald">
                   {type === "deposit" ? "Funds Received!" : "Withdrawal Requested!"}
                 </h3>
@@ -220,7 +220,7 @@ const WalletModal = ({ open, onClose, type, onSuccess }: WalletModalProps) => {
                 <p className="text-xs text-muted-foreground mb-6">
                   {type === "deposit"
                     ? "Your deposit request has been submitted. Funds will appear once confirmed by LankaPay."
-                    : "Your withdrawal will be processed within 1–2 business days."}
+                    : "Your withdrawal will be processed within 1â€“2 business days."}
                 </p>
                 <button
                   onClick={handleDone}

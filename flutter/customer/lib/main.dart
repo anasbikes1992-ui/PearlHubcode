@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pearlhub_shared/services/auth_service.dart';
-import 'package:pearlhub_shared/models/user_profile.dart';
+import 'services/auth_service.dart';
+import 'models/user_profile.dart';
 
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';

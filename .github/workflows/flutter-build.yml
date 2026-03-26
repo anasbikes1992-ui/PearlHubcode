@@ -27,10 +27,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Resolve shared package
-        working-directory: flutter/pearlhub_shared
-        run: flutter pub get
-
       - name: Resolve app dependencies
         working-directory: flutter/${{ matrix.app }}
         run: flutter pub get

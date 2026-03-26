@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/store/useStore";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { formatPrice, calculateDistance } from "@/lib/utils";
 import { Search, MapPin, Loader2, Languages, SlidersHorizontal } from "lucide-react";
 
@@ -26,7 +26,7 @@ const TYPE_ICONS: Record<string, string> = {
 const SearchResultsPage = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { language, isExpatMode } = useStore() as any;
+  const { language, isExpatMode } = useStore();
   const rawQuery = params.get("q") || "";
   const category  = params.get("category") || "all";
 
@@ -67,7 +67,7 @@ const SearchResultsPage = () => {
         const d = await res.json();
         return d.content?.[0]?.text?.trim() ?? q;
       }
-    } catch {}
+    } catch { /* translation failure — fall through to original query */ }
     setTranslating(false);
     return q;
   }, [apiKey, language]);
@@ -83,7 +83,7 @@ const SearchResultsPage = () => {
       setTranslating(false);
 
       // Use the unified search function
-      const { data, error } = await (supabase as any).rpc("search_all_listings", {
+      const { data, error } = await db.rpc("search_all_listings", {
         p_query: englishQ,
         p_limit: 40,
       });
@@ -92,10 +92,10 @@ const SearchResultsPage = () => {
         // Fallback: parallel ilike queries if RPC not yet deployed
         const searchQ = `%${englishQ}%`;
         const [sr, vr, er, pr] = await Promise.all([
-          (supabase as any).from("stays_listings").select("id,name,location,price_per_night,images,rating").ilike("name", searchQ).eq("moderation_status","approved").limit(10),
-          (supabase as any).from("vehicles_listings").select("id,title,location,price_per_day,images,rating").ilike("title", searchQ).eq("moderation_status","approved").limit(10),
-          (supabase as any).from("events_listings").select("id,title,location,price_standard,images").ilike("title", searchQ).eq("moderation_status","approved").limit(10),
-          (supabase as any).from("properties_listings").select("id,title,location,price,images").ilike("title", searchQ).eq("moderation_status","approved").limit(10),
+          db.from("stays_listings").select("id,name,location,price_per_night,images,rating").ilike("name", searchQ).eq("moderation_status","approved").limit(10),
+          db.from("vehicles_listings").select("id,title,location,price_per_day,images,rating").ilike("title", searchQ).eq("moderation_status","approved").limit(10),
+          db.from("events_listings").select("id,title,location,price_standard,images").ilike("title", searchQ).eq("moderation_status","approved").limit(10),
+          db.from("properties_listings").select("id,title,location,price,images").ilike("title", searchQ).eq("moderation_status","approved").limit(10),
         ]);
         const combined: SearchResult[] = [
           ...(sr.data || []).map((r: any) => ({ id: r.id, title: r.name, listing_type: "stay",     location: r.location, price: r.price_per_night, image: r.images?.[0] ?? "", rating: r.rating ?? 0 })),
@@ -180,7 +180,7 @@ const SearchResultsPage = () => {
             <SlidersHorizontal size={14} className="text-muted-foreground" />
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as "relevance" | "price_asc" | "price_desc")}
               className="text-sm border border-input rounded-lg px-3 py-1.5 bg-background outline-none focus:border-primary"
             >
               <option value="relevance">Most Relevant</option>

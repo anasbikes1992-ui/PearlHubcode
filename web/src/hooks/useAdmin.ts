@@ -1,6 +1,6 @@
-// src/hooks/useAdmin.ts - Admin dashboard hooks for Phase 3
+﻿// src/hooks/useAdmin.ts - Admin dashboard hooks for Phase 3
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/integrations/supabase/client';
 import type { 
   Dispute, 
   Review, 
@@ -83,7 +83,7 @@ export const useApproveKYC = () => {
 
   return useMutation({
     mutationFn: async (kycId: string) => {
-      const { data, error } = await supabase.rpc('approve_kyc', {
+      const { data, error } = await db.rpc('approve_kyc', {
         p_kyc_id: kycId,
       });
 
@@ -137,7 +137,7 @@ export const useResolveDispute = () => {
           resolved_amount: params.resolvedAmount,
           resolution_notes: params.notes,
           resolved_at: new Date().toISOString(),
-          resolved_by: (await supabase.auth.getUser()).data.user?.id,
+          resolved_by: (await db.auth.getUser()).data.user?.id,
         })
         .eq('id', params.disputeId);
 
@@ -160,7 +160,7 @@ export const useApproveReview = () => {
         .update({
           moderation_status: 'approved',
           moderated_at: new Date().toISOString(),
-          moderated_by: (await supabase.auth.getUser()).data.user?.id,
+          moderated_by: (await db.auth.getUser()).data.user?.id,
         })
         .eq('id', reviewId);
 
@@ -182,7 +182,7 @@ export const useRejectReview = () => {
         .update({
           moderation_status: 'rejected',
           moderated_at: new Date().toISOString(),
-          moderated_by: (await supabase.auth.getUser()).data.user?.id,
+          moderated_by: (await db.auth.getUser()).data.user?.id,
         })
         .eq('id', reviewId);
 
@@ -211,7 +211,7 @@ export const useSuspendUser = () => {
           suspension_type: params.suspensionType,
           reason: params.reason,
           suspended_until: params.suspendedUntil,
-          suspended_by: (await supabase.auth.getUser()).data.user?.id,
+          suspended_by: (await db.auth.getUser()).data.user?.id,
         });
 
       if (error) throw error;
@@ -236,16 +236,22 @@ export const useAdminStats = () => {
         reviewsRes,
         flagsRes,
         suspensionsRes,
+        revenueRes,
       ] = await Promise.all([
-        supabase.from('profiles').select('count', { count: 'exact' }).gte('created_at', new Date(Date.now() - 86400000).toISOString()),
-        supabase.from('listings_geospatial').select('count', { count: 'exact' }),
-        supabase.from('bookings').select('count', { count: 'exact' }).gte('created_at', new Date(Date.now() - 86400000).toISOString()),
-        supabase.from('disputes').select('count', { count: 'exact' }).eq('status', 'open'),
-        supabase.from('kyc_verifications').select('count', { count: 'exact' }).eq('status', 'pending'),
-        supabase.from('reviews').select('count', { count: 'exact' }).eq('moderation_status', 'pending'),
-        supabase.from('content_flags').select('count', { count: 'exact' }).eq('moderation_status', 'pending'),
-        supabase.from('user_suspensions').select('count', { count: 'exact' }).neq('suspended_until', null),
+        db.from('profiles').select('count', { count: 'exact' }).gte('created_at', new Date(Date.now() - 86400000).toISOString()),
+        db.from('listings_geospatial').select('count', { count: 'exact' }),
+        db.from('bookings').select('count', { count: 'exact' }).gte('created_at', new Date(Date.now() - 86400000).toISOString()),
+        db.from('disputes').select('count', { count: 'exact' }).eq('status', 'open'),
+        db.from('kyc_verifications').select('count', { count: 'exact' }).eq('status', 'pending'),
+        db.from('reviews').select('count', { count: 'exact' }).eq('moderation_status', 'pending'),
+        db.from('content_flags').select('count', { count: 'exact' }).eq('moderation_status', 'pending'),
+        db.from('user_suspensions').select('count', { count: 'exact' }).neq('suspended_until', null),
+        db.from('bookings').select('total_amount').gte('created_at', new Date(Date.now() - 86400000).toISOString()).eq('status', 'completed'),
       ]);
+
+      const revenue_today = (revenueRes.data || []).reduce(
+        (sum: number, b: { total_amount: number }) => sum + (b.total_amount || 0), 0
+      );
 
       return {
         total_users: usersRes.count || 0,
@@ -256,8 +262,8 @@ export const useAdminStats = () => {
         pending_reviews: reviewsRes.count || 0,
         flagged_content: flagsRes.count || 0,
         active_suspensions: suspensionsRes.count || 0,
-        revenue_today: 0, // TODO: Calculate from bookings
-        avg_response_time: 0, // TODO: Calculate from messages
+        revenue_today,
+        avg_response_time: 0, // Requires message timestamp analysis — deferred
       } as AdminDashboardStats;
     },
     refetchInterval: 60000, // Refetch every minute

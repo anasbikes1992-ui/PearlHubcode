@@ -1,11 +1,11 @@
 /**
- * AvailabilityCalendar — real-time availability using Supabase Realtime.
+ * AvailabilityCalendar â€” real-time availability using Supabase Realtime.
  * Shows booked / available date ranges. Providers can block dates.
  * Guests see live availability with no stale data.
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, db } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Loader2, Lock, Unlock, Check } from "lucide-react";
@@ -51,16 +51,16 @@ export default function AvailabilityCalendar({
   const [selectEnd, setSelectEnd]     = useState<string | null>(null);
   const [saving, setSaving]           = useState(false);
 
-  // ── Load bookings + blocked dates ────────────────────────
+  // â”€â”€ Load bookings + blocked dates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loadData = useCallback(async () => {
     setLoading(true);
     const [bookRes, blockRes] = await Promise.all([
-      (supabase as any)
+      db
         .from("bookings")
         .select("check_in_date, check_out_date")
         .eq("listing_id", listingId)
         .in("status", ["pending", "confirmed"]),
-      (supabase as any)
+      db
         .from("blocked_dates")
         .select("blocked_date")
         .eq("listing_id", listingId),
@@ -74,7 +74,7 @@ export default function AvailabilityCalendar({
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Realtime: refresh when bookings change ────────────────
+  // â”€â”€ Realtime: refresh when bookings change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const channel = supabase
       .channel(`availability-${listingId}`)
@@ -86,7 +86,7 @@ export default function AvailabilityCalendar({
     return () => { supabase.removeChannel(channel); };
   }, [listingId, loadData]);
 
-  // ── Date status calculation ───────────────────────────────
+  // â”€â”€ Date status calculation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getStatus = (y: number, m: number, d: number): DateStatus => {
     const ds = formatDate(y, m, d);
     const dt = parseDate(ds);
@@ -109,7 +109,7 @@ export default function AvailabilityCalendar({
     return "available";
   };
 
-  // ── Calendar grid ─────────────────────────────────────────
+  // â”€â”€ Calendar grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
@@ -124,14 +124,14 @@ export default function AvailabilityCalendar({
       // Toggle blocked date
       setSaving(true);
       if (blockedDates.has(ds)) {
-        await (supabase as any)
+        await db
           .from("blocked_dates")
           .delete()
           .eq("listing_id", listingId)
           .eq("blocked_date", ds);
         setBlockedDates(prev => { const n = new Set(prev); n.delete(ds); return n; });
       } else if (status === "available" || status === "today") {
-        await (supabase as any)
+        await db
           .from("blocked_dates")
           .insert({ listing_id: listingId, user_id: user.id, blocked_date: ds });
         setBlockedDates(prev => new Set([...prev, ds]));
@@ -263,7 +263,7 @@ export default function AvailabilityCalendar({
                 {selectEnd ? `${nights} night${nights !== 1 ? "s" : ""}` : "Select check-out date"}
               </p>
               <p className="text-[10px] text-mist/60 mt-0.5">
-                {selectStart}{selectEnd ? ` → ${selectEnd}` : ""}
+                {selectStart}{selectEnd ? ` â†’ ${selectEnd}` : ""}
               </p>
             </div>
             {selectEnd && pricePerNight && (

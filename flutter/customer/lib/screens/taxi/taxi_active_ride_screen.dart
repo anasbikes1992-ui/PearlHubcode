@@ -6,8 +6,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:pearlhub_shared/models/taxi.dart';
-import 'package:pearlhub_shared/services/taxi_service.dart';
+import '../../models/taxi.dart';
+import '../../services/taxi_service.dart';
 
 class TaxiActiveRideScreen extends ConsumerWidget {
   final String rideId;

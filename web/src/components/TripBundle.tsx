@@ -1,5 +1,5 @@
 /**
- * TripBundle — "Plan Your Full Trip" cart.
+ * TripBundle â€” "Plan Your Full Trip" cart.
  * Bundle a stay + vehicle + event in one checkout.
  * Pearl Hub's biggest competitive moat: no competitor offers this.
  */
@@ -8,7 +8,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/store/useStore";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { formatPrice } from "@/lib/utils";
 import { ShoppingCart, X, Hotel, Car, Ticket, Sparkles, Loader2, ChevronRight, Check, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +63,7 @@ export default function TripBundle({ isOpen, onClose }: TripBundleProps) {
       // Create one booking record per bundle item
       const refs: string[] = [];
       for (const item of bundleItems as BundleItem[]) {
-        const { data } = await (supabase as any).from("bookings").insert({
+        const { data } = await db.from("bookings").insert({
           user_id:       user.id,
           listing_id:    item.id,
           listing_type:  item.type,
@@ -116,7 +116,7 @@ export default function TripBundle({ isOpen, onClose }: TripBundleProps) {
               <div>
                 <h2 className="text-sm font-black text-pearl uppercase tracking-tight">Trip Bundle</h2>
                 <p className="text-[10px] text-mist/40">
-                  {(bundleItems as BundleItem[]).length} item{(bundleItems as BundleItem[]).length !== 1 ? "s" : ""} · Bundle &amp; save 5%
+                  {(bundleItems as BundleItem[]).length} item{(bundleItems as BundleItem[]).length !== 1 ? "s" : ""} Â· Bundle &amp; save 5%
                 </p>
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function TripBundle({ isOpen, onClose }: TripBundleProps) {
                               <p className="text-xs font-bold text-pearl line-clamp-1">{item.title}</p>
                               {item.dateFrom && (
                                 <p className="text-[10px] text-mist/40 mt-0.5">
-                                  {item.dateFrom}{item.dateTo ? ` → ${item.dateTo}` : ""}
+                                  {item.dateFrom}{item.dateTo ? ` â†’ ${item.dateTo}` : ""}
                                 </p>
                               )}
                               {item.details && (
@@ -205,7 +205,7 @@ export default function TripBundle({ isOpen, onClose }: TripBundleProps) {
             {step === "processing" && (
               <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
                 <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm font-black text-pearl uppercase tracking-widest">Processing Bundle…</p>
+                <p className="text-sm font-black text-pearl uppercase tracking-widest">Processing Bundleâ€¦</p>
                 <p className="text-xs text-mist/40">Securing all {(bundleItems as BundleItem[]).length} bookings simultaneously</p>
               </div>
             )}
@@ -240,7 +240,7 @@ export default function TripBundle({ isOpen, onClose }: TripBundleProps) {
               {(bundleItems as BundleItem[]).length >= 2 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-mist/50">Bundle discount (5%)</span>
-                  <span className="text-emerald-400 font-black">−Rs. {savings.toLocaleString()}</span>
+                  <span className="text-emerald-400 font-black">âˆ’Rs. {savings.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex items-center justify-between">

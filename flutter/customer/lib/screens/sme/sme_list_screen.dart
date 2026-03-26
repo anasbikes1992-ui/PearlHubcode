@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pearlhub_shared/services/listings_service.dart';
+import '../../services/listings_service.dart';
 
 class SMEListScreen extends ConsumerStatefulWidget {
   const SMEListScreen({super.key});

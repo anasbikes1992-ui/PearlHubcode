@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, db } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/store/useStore";
 import {
@@ -127,7 +127,7 @@ export default function BookingChat({
   useEffect(() => {
     if (!isOpen || !bookingId) return;
     const load = async () => {
-      const { data } = await (supabase as any)
+      const { data } = await db
         .from("booking_messages")
         .select("*")
         .eq("booking_id", bookingId)
@@ -229,7 +229,7 @@ export default function BookingChat({
     );
     setTranslating(false);
 
-    const { error } = await (supabase as any).from("booking_messages").insert({
+    const { error } = await db.from("booking_messages").insert({
       booking_id:    bookingId,
       sender_id:     user.id,
       sender_name:   profile?.full_name ?? "Guest",

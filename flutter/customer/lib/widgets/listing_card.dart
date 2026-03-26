@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pearlhub_shared/models/listings.dart';
+import '../models/listings.dart';
 
 class StayCard extends StatelessWidget {
   final Stay stay;

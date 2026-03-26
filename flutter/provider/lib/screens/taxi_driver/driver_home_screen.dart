@@ -6,9 +6,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:pearlhub_shared/services/auth_service.dart';
-import 'package:pearlhub_shared/services/taxi_service.dart';
-import 'package:pearlhub_shared/models/taxi.dart';
+import '../../services/auth_service.dart';
+import '../../services/taxi_service.dart';
+import '../../models/taxi.dart';
 
 // Driver online status (local state — could also persist to DB for dispatch)
 final driverOnlineProvider = StateProvider<bool>((ref) => false);

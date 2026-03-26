@@ -17,7 +17,7 @@ const ShareButtons = ({ title, description = "", url }: ShareButtonsProps) => {
     if (navigator.share) {
       try {
         await navigator.share({ title, text: description, url: shareUrl });
-      } catch {}
+      } catch { /* user cancelled share dialog */ }
     }
   };
 

@@ -1,5 +1,6 @@
 name: pearlhub_customer
 description: PearlHub Customer App — Sri Lanka's premier marketplace
+publish_to: none
 version: 1.0.0+1
 
 environment:
@@ -11,10 +12,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   supabase_flutter: ^2.5.0
-
-  # Shared package
-  pearlhub_shared:
-    path: ../shared
 
   # Navigation
   go_router: ^13.2.0

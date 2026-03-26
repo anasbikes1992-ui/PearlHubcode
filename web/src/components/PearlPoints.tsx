@@ -1,12 +1,12 @@
 /**
- * PearlPoints — Loyalty programme.
+ * PearlPoints â€” Loyalty programme.
  * 1 point per Rs. 100 spent. Redeem at checkout (80% value, 20% cap).
  * Shown in the customer dashboard and during checkout.
  */
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Sparkles, TrendingUp, Gift, Loader2 } from "lucide-react";
 
@@ -18,10 +18,10 @@ interface PointsData {
 }
 
 const TIERS = [
-  { name: "Standard", min: 0,     max: 4999,  color: "text-mist",    bg: "bg-mist/10",    icon: "●" },
-  { name: "Silver",   min: 5000,  max: 14999, color: "text-gray-300",bg: "bg-gray-300/10",icon: "◆" },
-  { name: "Gold",     min: 15000, max: 49999, color: "text-primary",  bg: "bg-primary/10", icon: "★" },
-  { name: "Elite",    min: 50000, max: Infinity, color: "text-emerald-400", bg: "bg-emerald-400/10", icon: "♛" },
+  { name: "Standard", min: 0,     max: 4999,  color: "text-mist",    bg: "bg-mist/10",    icon: "â—" },
+  { name: "Silver",   min: 5000,  max: 14999, color: "text-gray-300",bg: "bg-gray-300/10",icon: "â—†" },
+  { name: "Gold",     min: 15000, max: 49999, color: "text-primary",  bg: "bg-primary/10", icon: "â˜…" },
+  { name: "Elite",    min: 50000, max: Infinity, color: "text-emerald-400", bg: "bg-emerald-400/10", icon: "â™›" },
 ];
 
 function getTier(points: number) {
@@ -36,7 +36,7 @@ export function PearlPointsWidget() {
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     const load = async () => {
-      const { data: rows } = await (supabase as any)
+      const { data: rows } = await db
         .from("pearl_points")
         .select("*")
         .eq("user_id", user.id)
@@ -81,7 +81,7 @@ export function PearlPointsWidget() {
         <div className="text-right">
           <p className="text-[10px] font-black text-mist/40 uppercase tracking-widest">Balance</p>
           <p className="text-xl font-black text-primary">{data.balance.toLocaleString()}</p>
-          <p className="text-[9px] text-mist/30">≈ Rs. {lkrValue.toLocaleString()} value</p>
+          <p className="text-[9px] text-mist/30">â‰ˆ Rs. {lkrValue.toLocaleString()} value</p>
         </div>
       </div>
 
@@ -122,7 +122,7 @@ export function PearlPointsWidget() {
       <div className="p-3 bg-primary/5 border border-primary/15 rounded-2xl">
         <p className="text-[10px] text-primary/80 font-medium leading-relaxed">
           Earn <strong>1 Pearl Point</strong> per Rs. 100 spent across all verticals.
-          Redeem at checkout — 1 pt = Rs. 0.80 (up to 20% discount per booking).
+          Redeem at checkout â€” 1 pt = Rs. 0.80 (up to 20% discount per booking).
         </p>
       </div>
     </div>
@@ -142,7 +142,7 @@ export function PearlPointsBadge({ points, onRedeem }: { points: number; onRedee
         <Sparkles size={14} className="text-primary" />
         <div>
           <p className="text-xs font-black text-primary">{points.toLocaleString()} Pearl Points</p>
-          <p className="text-[10px] text-mist/50">≈ Rs. {Math.floor(points * 0.8).toLocaleString()} value</p>
+          <p className="text-[10px] text-mist/50">â‰ˆ Rs. {Math.floor(points * 0.8).toLocaleString()} value</p>
         </div>
       </div>
       {onRedeem && points > 0 && (

@@ -1,13 +1,13 @@
 // useAvailability.ts - Check and manage listing availability
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, db } from '@/integrations/supabase/client';
 import type { AvailabilityCheckResponse, SetAvailabilityParams } from '@/types/marketplace';
 
 export const useAvailability = (listingId: string, slotDate: string) => {
   return useQuery({
     queryKey: ['availability', listingId, slotDate],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('check_availability', {
+      const { data, error } = await db.rpc('check_availability', {
         p_listing_id: listingId,
         p_slot_date: slotDate,
       }) as { data: AvailabilityCheckResponse[] | null; error: any };
@@ -21,11 +21,10 @@ export const useAvailability = (listingId: string, slotDate: string) => {
 
 export const useSetAvailability = () => {
   const queryClient = useQueryClient();
-  const session = supabase.auth.getSession();
 
   return useMutation({
     mutationFn: async (params: SetAvailabilityParams) => {
-      const { data: sessionData } = await session;
+      const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
       if (!token) {
@@ -84,7 +83,7 @@ export const useAvailabilityRange = (listingId: string, startDate: string, endDa
   return useQuery({
     queryKey: ['availabilityRange', listingId, startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('availability_slots')
         .select('*')
         .eq('listing_id', listingId)
